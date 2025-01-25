@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="../script/angular.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f9fafb;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: white;
+            padding: 20px;
+            position: fixed;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: #f3f4f6;
+        }
+
+        .nav-item.active {
+            background: #e5f7ef;
+            color: var(--primary-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            width: calc(100% - var(--sidebar-width));
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Profile Dropdown */
+        .profile {
+            position: relative;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .profile-icon {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .profile-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 40px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            z-index: 1000;
+        }
+
+        .profile-menu.active {
+            display: block;
+        }
+
+        .profile-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .profile-menu-item:hover {
+            background: #f3f4f6;
+        }
+
+        /* Dashboard Sections - 2x2 Grid */
+        .dashboard-sections {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            /* 2 columns per row */
+            gap: 20px;
+            width: 100%;
+        }
+
+        .section-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            min-width: 250px;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .section-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            color: var(--primary-color);
+        }
+
+        /* Task List */
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Financial Chart */
+        .financial-chart-container,
+        .weekly-sales-chart-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+        }
+
+        /* Low Stock List */
+        .low-stock-list,
+        .activity-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .low-stock-item,
+        .activity-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: #fef3c7;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+
+    <script>
+        $(document).ready(function () {
+            function setActiveUser() {
+                var au = localStorage.getItem("activeKuch");
+
+                // Fetch worker information based on the active user
+                $.ajax({
+                    url: '/api/worker-info',
+                    method: 'POST',
+                    data: { username: au },
+                    success: function (response) {
+                        if (response && response.worker) {
+                            $("#worker_name").text(response.worker.name);
+                        } else {
+                            console.log('Worker information not found in the response');
+                        }
+                    },
+                    error: function (error) {
+                        console.error('Error fetching worker info:', error);
+                    }
+                });
+            }
+
+            function fetchLowStockItems() {
+                $.ajax({
+                    url: '/api/low-stock',
+                    method: 'POST',
+                    success: function (response) {
+                        const lowStockList = $('#lowStockList');
+                        lowStockList.empty();  // Clear existing items
+
+                        if (response && response.length) {
+                            response.forEach(item => {
+                                const listItem = $('<li>').addClass('low-stock-item')
+                                    .text(`${item.product_name} - ${item.quantity} left`);
+                                lowStockList.append(listItem);
+                            });
+                        } else {
+                            console.log('No low stock items found');
+                        }
+                    },
+                    error: function (error) {
+                        console.error('Error fetching low stock items:', error);
+                    }
+                });
+            }
+
+
+            // Initialize functions
+            setActiveUser();
+            fetchLowStockItems();
+        });
+
+    </script>
+    <script>
+       $(document).ready(function() {
+    // Fetch sales summary data
+    $.ajax({
+        url: '/api/sales-summary',
+        method: 'GET',
+        success: function(response) {
+            console.log(response);  // Log the response to check the structure
+            
+            // Ensure response fields are numbers before using toFixed
+            let totalRevenue = Number(response.totalRevenue);
+            let totalOrders = Number(response.totalOrders);
+            let averageOrderValue = Number(response.averageOrderValue);
+
+            // Check if all values are valid numbers
+            if (!isNaN(totalRevenue) && !isNaN(totalOrders) && !isNaN(averageOrderValue)) {
+                $('#totalRevenue').text('Total Revenue: $' + totalRevenue.toFixed(2));
+                $('#totalOrders').text('Total Orders: ' + totalOrders);
+                $('#averageOrderValue').text('Average Order Value: $' + averageOrderValue.toFixed(2));
+            } else {
+                console.log('Invalid data in response');
+                $('#totalRevenue').text('Total Revenue: $0.00');
+                $('#totalOrders').text('Total Orders: 0');
+                $('#averageOrderValue').text('Average Order Value: $0.00');
+            }
+        },
+        error: function(error) {
+            console.error('Error fetching sales summary:', error);
+        }
+    });
+});
+
+    </script>
+    <script>
+        $(document).ready(function() {
+    // Fetch weekly sales data
+    $.ajax({
+        url: '/api/weekly-sales',
+        method: 'GET',
+        success: function(response) {
+            console.log(response);  // Log the response to check the structure
+            
+            // Extract sales data for the chart
+            const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const salesData = daysOfWeek.map(day => {
+                const dayData = response.find(item => item.day === day);
+                return dayData ? dayData.total_sales : 0;
+            });
+
+            // Update the chart with the fetched sales data
+            const weeklySalesCtx = document.getElementById('weeklySalesChart').getContext('2d');
+            const weeklySalesChart = new Chart(weeklySalesCtx, {
+                type: 'line',
+                data: {
+                    labels: daysOfWeek,
+                    datasets: [{
+                        label: 'Sales ($)',
+                        data: salesData,
+                        borderColor: '#2563eb',
+                        fill: false,
+                        tension: 0.4
+                    }]
+                }
+            });
+        },
+        error: function(error) {
+            console.error('Error fetching weekly sales data:', error);
+        }
+    });
+});
+
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-toolbox"></i> Worker Dashboard
+            </div>
+            <div class="nav-item active" onclick="window.location.href='worker.html'">
+                <i class="fas fa-home"></i> Dashboard
+            </div>
+            <div class="nav-item" onclick="window.location.href='inventory.html'">
+                <i class="fas fa-boxes"></i> Manage Inventory
+            </div>
+            <div class="nav-item" onclick="window.location.href='financial.html'">
+                <i class="fas fa-file-invoice-dollar"></i> Financial Records
+            </div>
+            <div class="nav-item" onclick="window.location.href='communication.html'">
+                <i class="fas fa-comments"></i> Communication
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Profile Section -->
+            <div class="profile">
+                <div class="profile-icon" onclick="toggleProfileMenu()">
+                    <i class="fas fa-user-circle fa-2x"></i>
+                    <span id="worker_name"></span>
+                </div>
+                <div class="profile-menu" id="profileMenu">
+                    <div class="profile-menu-item" onclick="openProfile()">Profile</div>
+                    <div class="profile-menu-item" onclick="openSettings()">Settings</div>
+                    <div class="profile-menu-item" onclick="logout()">Log Out</div>
+                </div>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-sections">
+
+
+
+                <!-- Inventory Low Stock Section -->
+                <div class="section-card">
+                    <h3>Inventory Low Stock</h3>
+                    <ul class="low-stock-list" id="lowStockList">
+                        <!-- Low stock items will be dynamically added here -->
+                    </ul>
+                </div>
+
+                <!-- Sales Summary Section -->
+                <div class="section-card">
+                    <h3>Sales Summary</h3>
+                    <p id="totalRevenue">Total Revenue: $5000</p>
+                    <p id="totalOrders">Total Orders: 120</p>
+                    <p id="averageOrderValue">Average Order Value: $41.67</p>
+                </div>
+
+
+
+
+                <!-- Weekly Sales Trend Chart -->
+                <div class="section-card">
+                    <h3>Weekly Sales Trend</h3>
+                    <div class="weekly-sales-chart-container">
+                        <canvas id="weeklySalesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Profile Menu Functionality
+        function toggleProfileMenu() {
+            const profileMenu = document.getElementById('profileMenu');
+            profileMenu.classList.toggle('active');
+        }
+
+        function openProfile() {
+            alert('Open Profile');
+        }
+
+        function openSettings() {
+            alert('Open Settings');
+        }
+
+        function logout() {
+            alert('Log Out');
+        }
+
+
+
+
+        // Weekly Sales Trend Line Chart
+        const weeklySalesCtx = document.getElementById('weeklySalesChart').getContext('2d');
+
+
+        // Inventory Data and Low Stock Display
+        const inventoryData = [
+            { name: 'Item A', quantity: 3 },
+            { name: 'Item B', quantity: 2 },
+            { name: 'Item C', quantity: 10 },
+            { name: 'Item D', quantity: 4 }
+        ];
+
+        function displayLowStockItems() {
+            const lowStockList = document.getElementById('lowStockList');
+            lowStockList.innerHTML = ''; // Clear existing items
+
+            inventoryData
+                .filter(item => item.quantity <= 5)
+                .forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('low-stock-item');
+                    listItem.textContent = `${item.name} - ${item.quantity} left`;
+                    lowStockList.appendChild(listItem);
+                });
+        }
+
+        // Initialize Low Stock Display
+        displayLowStockItems();
+    </script>
+</body>
+
+</html>

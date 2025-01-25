@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f1f5f9;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: white;
+            padding: 20px;
+            position: fixed;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+        }
+
+        .nav-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .orders-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+        }
+
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-container form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .form-container form .form-group {
+            flex: 1 1 calc(50% - 20px);
+        }
+
+        .form-container form .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        .form-container form .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+        }
+
+        .form-container form button {
+            padding: 10px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .form-container form button:hover {
+            background: #1d4ed8;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+    </style>
+    <script>
+        // Function to generate a unique Worker ID
+        function generateWorkerId() {
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const numbers = '0123456789';
+
+            // Generate two random letters
+            const randomLetters = Array.from({ length: 3 }, () =>
+                letters.charAt(Math.floor(Math.random() * letters.length))
+            ).join('');
+
+            // Generate two random numbers
+            const randomNumbers = Array.from({ length: 3 }, () =>
+                numbers.charAt(Math.floor(Math.random() * numbers.length))
+            ).join('');
+
+            return randomLetters + "-" + randomNumbers;
+        }
+
+        // Set the Worker ID when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const workerIdField = document.getElementById('workerId');
+            workerIdField.value = generateWorkerId();
+        });
+
+        // Reset Worker ID on form reset
+        const workerForm = document.getElementById('workerForm');
+        workerForm.addEventListener('reset', () => {
+            const workerIdField = document.getElementById('workerId');
+            workerIdField.value = generateWorkerId();
+        });
+
+
+
+    </script>
+    <script>
+        $(document).ready(function () {
+            $("#employee").click(function () {
+                var workerNameku = $("#workerName").val();
+                var workerIdku = $("#workerId").val();
+                var workerUsernameku = $("#workerUsername").val();
+                var workerPasswordku = $("#workerPassword").val();
+
+                var obj = {
+                    type: "GET", // Correct method
+                    url: "/add-employee", // Endpoint
+                    data: {
+                        workerName: workerNameku,
+                        workerId: workerIdku,
+                        workerUsername: workerUsernameku,
+                        workerPassword: workerPasswordku
+                    }
+                };
+
+                $.ajax(obj)
+                    .done(function (respkuch1) {
+                        alert("Worker added successfully");
+                        window.location.reload();
+                    })
+                    .fail(function (errkuch1) {
+                        alert("Error adding worker: " + JSON.stringify(errkuch1));
+                    });
+            });
+        });
+
+
+    </script>
+
+    <script src="../script/angular.min.js"></script>
+    <script>
+        var module = angular.module("myModule", []);
+        module.controller("myController", function ($scope, $http) {
+
+
+
+            $scope.jsonArray;
+
+            //-------------
+            $scope.doDelete = function (id) {
+                if (confirm("R U Sure?") == false)
+                    return;
+                var url = "/do-angular-delete?idkuch=" + id;//+"&pwd="+pwdkuch;
+                $http.get(url).then(done, fail);
+                function done(response) {
+                    alert(response.data);
+                    $scope.fetchRecords();
+
+                }
+                function fail(response) {
+                    alert(response.data);
+                }
+
+            }
+            //===============
+            $scope.doBlock = function (id) {
+
+                var url = "/do-angular-block?idkuch=" + id;
+                $http.get(url).then(done, fail);
+                function done(response) {
+                    alert(response.data);
+                    $scope.fetchRecords();
+
+                }
+                function fail(response) {
+                    alert(response.data);
+                }
+
+            }
+            //==============
+            $scope.doResume = function (id) {
+
+                var url = "/do-angular-resume?idkuch=" + id;
+                $http.get(url).then(done, fail);
+                function done(response) {
+                    alert(response.data);
+                    $scope.fetchRecords();
+
+                }
+                function fail(response) {
+                    alert(response.data);
+                }
+
+            }
+
+            $scope.fetchRecords = function () {
+                var url = "/get-angular-employee-records";
+                $http.get(url).then(done, fail);
+
+                function done(response) {
+                    console.log(response.data); // Check if data is received
+                    $scope.jsonArray = response.data;
+                }
+
+                function fail(response) {
+                    console.error(response); // Log the error for debugging
+                    alert("Error fetching records: " + response.data);
+                }
+            };
+            $scope.fetchRecords();
+
+        })
+    </script>
+    <style>
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid #e2e8f0;
+        }
+
+        .table th {
+            background-color: #f8fafc;
+            font-weight: bold;
+        }
+
+        .table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-badge.active {
+            background-color: #16a34a;
+        }
+
+        .status-badge.blocked {
+            background-color: #dc2626;
+        }
+
+        .action-btn {
+            padding: 5px 10px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            font-size: 0.85rem;
+        }
+
+        .action-btn.delete {
+            background-color: #dc2626;
+        }
+
+        .action-btn.block {
+            background-color: #facc15;
+            color: #1e293b;
+        }
+
+        .action-btn.resume {
+            background-color: #2563eb;
+        }
+
+        .action-btn:hover {
+            opacity: 0.8;
+        }
+    </style>
+
+
+</head>
+
+<body ng-app="myModule" ng-controller="myController">
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-home"></i> <a href="index.html"
+                    style="text-decoration: none; color: black;">Overview</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-dollar-sign"></i> <a href="finance.html"
+                    style="text-decoration: none; color: rgb(0, 0, 0);">Financial</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-box"></i> <a href="inventory.html"
+                    style="text-decoration: none; color: black;">Inventory</a>
+            </div>
+            <div class="nav-item active">
+                <i class="fas fa-users"></i> <a href="employees.html"
+                    style="text-decoration: none; color: rgb(255, 255, 255);">Employees</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-comments"></i> <a href="communication.html"
+                    style="text-decoration: none; color: black;">Communication</a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h1>Welcome back, Owner!</h1>
+                <div class="user-info">
+                    <i class="fas fa-bell"></i>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </div>
+
+            <!-- Form to Add Worker -->
+            <div class="form-container">
+                <h2>Add Worker</h2>
+                <form id="workerForm" method="post">
+                    <div class="form-group">
+                        <label for="workerName">Worker Name</label>
+                        <input type="text" id="workerName" name="workerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="workerId">Unique Worker ID</label>
+                        <input type="text" id="workerId" name="workerId" readonly required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="workerUsername">Worker Username</label>
+                        <input type="email" id="workerUsername" name="workerUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="workerPassword">Worker Password</label>
+                        <input type="password" id="workerPassword" name="workerPassword" required>
+                    </div>
+                    <button type="button" id="employee" formaction="/signup">Add Worker</button>
+                </form>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="orders-container">
+                <h2>Employees</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Sr no.</th>
+                            <th>Worker ID</th>
+                            <th>Name</th>
+                            <th>Username</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable">
+                        <!-- Orders will be inserted here by JavaScript -->
+                        <tr ng-repeat="obj in jsonArray">
+                            <td>{{$index+1}}</td>
+                            <td>{{obj.id}}</td>
+                            <td>{{obj.name}}</td>
+                            <td>{{obj.username}}</td>
+                            <td>{{obj.status}}</td>
+                            <td align="center">
+                                <input type="button" class="action-btn block" value="Block" ng-click="doBlock(obj.id);">
+                                <input type="button" class="action-btn resume" value="Resume"
+                                    ng-click="doResume(obj.id);">
+                                <input type="button" class="action-btn delete" value="Delete"
+                                    ng-click="doDelete(obj.id);">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        Stock alert: Item running low!
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+</body>
+
+</html>

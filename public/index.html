@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js"> <!--<![endif]-->
+
+<head>
+	<meta cha$et="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>ERP System</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Free HTML5 Template by FREEHTML5.CO" />
+	<meta name="keywords" content="free html5, free template, free bootstrap, html5, css3, mobile fi$t, responsive" />
+	<meta name="author" content="FREEHTML5.CO" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+	<link rel="stylesheet"
+		href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+	<link rel="stylesheet"
+		href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,400,1,0" />
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+
+	<link rel="stylesheet" href="css/chatbot.css">
+	<script src="script/angular.min.js"></script>
+
+	<!-- 
+	//////////////////////////////////////////////////////
+
+	FREE HTML5 TEMPLATE 
+	DESIGNED & DEVELOPED by FREEHTML5.CO
+		
+	Website: 		http://freehtml5.co/
+	Email: 			info@freehtml5.co
+	Twitter: 		http://twitter.com/fh5co
+	Facebook: 		https://www.facebook.com/fh5co
+
+	//////////////////////////////////////////////////////
+	 -->
+
+	<!-- Facebook and Twitter integration -->
+	<meta property="og:title" content="" />
+	<meta property="og:image" content="" />
+	<meta property="og:url" content="" />
+	<meta property="og:site_name" content="" />
+	<meta property="og:description" content="" />
+	<meta name="twitter:title" content="" />
+	<meta name="twitter:image" content="" />
+	<meta name="twitter:url" content="" />
+	<meta name="twitter:card" content="" />
+
+	<!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
+	<link rel="shortcut icon" href="favicon.ico">
+
+	<link
+		href='https://fonts.googleapis.com/css?family=Playfair+Display:400,700,400italic,700italic|Merriweather:300,400italic,300italic,400,700italic'
+		rel='stylesheet' type='text/css'>
+
+	<!-- Animate.css -->
+	<link rel="stylesheet" href="css/animate.css">
+	<!-- Icomoon Icon Fonts-->
+	<link rel="stylesheet" href="css/icomoon.css">
+	<!-- Simple Line Icons -->
+	<link rel="stylesheet" href="css/simple-line-icons.css">
+	<!-- Datetimepicker -->
+	<link rel="stylesheet" href="css/bootstrap-datetimepicker.min.css">
+	<!-- Flexslider -->
+	<link rel="stylesheet" href="css/flexslider.css">
+	<!-- Bootstrap  -->
+	<link rel="stylesheet" href="css/bootstrap.css">
+
+	<link rel="stylesheet" href="css/style.css">
+	<link rel="stylesheet" href="css/login.css">
+
+
+	<!-- Modernizr JS -->
+	<script src="js/modernizr-2.6.2.min.js"></script>
+	<script src="js/login.js"></script>
+	<!-- FOR IE9 below -->
+	<!--[if lt IE 9]>
+	<script src="js/respond.min.js"></script>
+	<![endif]-->
+
+
+
+
+	<script>
+		//===========signUp===================
+
+		$(document).ready(function () {
+			$("#txtEmail").blur(function () {
+				if ($("#errEmail").html() == "OK") {
+					var emailKu = $(this).val();
+					var obj = {
+						type: "get",
+						url: "/chk-email",
+						data: {
+							kuchEmail: emailKm
+						}
+					}
+
+					$.ajax(obj).done(function (respKuch) {
+						//alert(respKuch);
+						$("#res").html(respKuch);
+					}).fail(function (errKuch) {
+						// alert(errKuch)
+						$("#res").html(respKuch);
+					})
+				}
+				else
+					$("#res").html("");
+			});
+
+
+
+
+			$("#txtEmail").blur(function () {
+
+				var r = /^[a-zA-Z_]+?\.\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,3}$/;
+				var p = /^[a-zA-Z_]\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,3}$/;
+				var email = $("#txtEmail").val();
+				if (r.test(email) == true || p.test(email) == true) {
+
+					$("#errEmail").html("OK");
+					$("#errEmail").addClass("sokhay").removeClass("okhay");
+				}
+				else {
+
+					$("#errEmail").html("Invalid ");
+					$("#errEmail").addClass("okhay").removeClass("sokhay");
+
+
+				}
+
+
+			});
+
+
+
+
+
+			$("#btn_signup").click(function () {
+				var emailku = $("#txtEmail").val();
+				var pwd = $("#txtpwd").val();
+				// var confirm = $("#txtconfirm").val();
+				var obj = {
+					type: "get",
+					url: "/chk-submit",
+					data: {
+						kuchemail: emailku,
+						kuchpwd: pwd
+					}
+				}
+				$.ajax(obj).done(function (respkuch1) {
+					//  alert(respkuch);
+					$("#btn-submit").html(respkuch1);
+				}).fail(function (errkuch1) {
+					//alert(errkuch);
+					$("#btn-submit").html(errkuch1);
+				})
+
+
+
+			});
+
+
+
+			//=====================login===========
+			$("#loginshow").click(function () {
+
+				var emailku = $("#txtEmail1").val();
+				var pwd = $("#txtpwd1").val();
+				var obj = {
+					type: "get",
+					url: "/chk-login-submit",
+					data: {
+						kuchemail: emailku,
+						kuchpwd: pwd
+					}
+				}
+
+				$.ajax(obj).done(function (respJSONkuch) {
+					localStorage.setItem("activeKuch", $("#txtEmail1").val());
+					if (respJSONkuch == "1")
+						location.href = "owner/index.html";
+					else if (respJSONkuch == "2")
+						location.href = "worker/worker.html";
+					else
+						alert(respJSONkuch);
+				}).fail(function (errkuch1) {
+					alert(errkuch1);
+				})
+
+			});
+
+		});
+
+
+
+
+
+	</script>
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+	<div class="js-sticky">
+		<div class="fh5co-main-nav">
+			<div class="container-fluid">
+				<div class="fh5co-menu-1">
+					<a href="#" data-nav-section="home">Home</a>
+					<a href="#" data-nav-section="about">About</a>
+					<!--	<a href="#" data-nav-section="features">Features</a>-->
+				</div>
+				<div class="fh5co-logo">
+					<a href="index.html">ERP</a>
+				</div>
+				<div class="fh5co-menu-2">
+					<a href="#" data-nav-section="features">Featured</a>
+					<!--		<a href="#" data-nav-section="menu">Menu</a>-->
+					<a href="#" data-nav-section="events">Goals</a>
+					<!--	<a href="#" data-nav-section="reservation">Reservation</a>-->
+				</div>
+				<div class="fh5co-menu-3" style="margin-top: 15px;">
+
+					<button type="button" class="btn btn-dark" id="loginbutton" onclick="showlogin()">Login
+						Here</button>
+
+					<!-- <a href="restaurant.html"><button type="button" class="btn btn-dark" id="loginbutton">Order Here</button></a> -->
+				</div>
+
+			</div>
+		</div>
+	</div>
+	<form action="post">
+		<div class="Login" id="login"style="height: 350px;">
+			<div class="cross"><img class="invert" onclick="closed()" src="images/cross.svg"></div>
+			<div><img class="person" height="100px" src="images/person.png"></div>
+			<div class="boards" >
+				<span><img class="invert" src="images/first.svg"></span>
+				<span><input type="text" id="txtEmail1" placeholder="Enter your username" required></span>
+			</div>
+			<div class="boards"><span><img class="invert" src="images\second.svg"></span>
+				<span><input type="password" id="txtpwd1" placeholder="Enter your password" required></span>
+			</div>
+			<div>
+				<button type="button" id="loginshow">Login</button>
+			</div>
+		</div>
+	</form>
+
+	<form action="post">
+		<div class="signup" id="signup">
+			<div class="cross"><img class="invert" onclick="closed()" src="images/cross.svg"></div>
+			<div><img class="person" height="100px" src="images/person.png" style="border-radius:100px;"></div>
+			<div class="boards">
+				<span><img class="invert" src="images/first.svg"></span>
+				<span><input type="text" id="txtEmail" placeholder="Enter your EmailID" required></span>
+				<span id="errEmail">*</span>
+				<span id="res"></span>
+			</div>
+			<div class="boards"><span><img class="invert" src="images\second.svg"></span>
+				<span><input type="password" id="txtpwd" placeholder="Enter your password" required></span>
+			</div>
+			<div class="boards"><span><img class="invert" src="images\second.svg"></span>
+				<span><input type="password" id="txtconfirm" placeholder="Confirm your password" required></span>
+			</div>
+
+			<div><button class="pass">Already have an account?<a href="#" onclick="showlogin()">Login!</a></button>
+			</div>
+			<div>
+				<span id="btn-submit">*</span>
+				<button type="button" id="btn_signup">Sign Up</button>
+			</div>
+		</div>
+	</form>
+
+	<div id="fh5co-container">
+		<div id="fh5co-home" class="js-fullheight" data-section="home">
+
+			<div class="flexslider">
+
+				<div class="fh5co-overlay"></div>
+				<div class="fh5co-text">
+					<div class="container">
+						<div class="row">
+							<h1 class="to-animate">ERP</h1>
+						</div>
+					</div>
+				</div>
+				<ul class="slides">
+					<li style="background-image: url(images/ERP1.jpeg);" data-stellar-background-ratio="0.5"></li>
+					<li style="background-image: url(images/ERP1.jpeg);" data-stellar-background-ratio="0.5"></li>
+					<li style="background-image: url(images/ERP1.jpeg);" data-stellar-background-ratio="0.5"></li>
+				</ul>
+
+			</div>
+
+		</div>
+
+		<div id="fh5co-about" data-section="about">
+			<div class="fh5co-2col fh5co-bg to-animate-2" style="background-image: url(images/ERP2.avif)"></div>
+			<div class="fh5co-2col fh5co-text">
+				<h2 class="heading to-animate">About Us</h2>
+				<p class="to-animate"><span class="fi$tcharacter">T</span>his innovative platform streamlines business
+					operations by integrating diverse modules into one cohesive system. From inventory management to
+					employee tracking, it's a comprehensive solution tailored for small to medium-sized enterprises.
+					With just a few clicks, users can efficiently manage processes, analyze data, and make informed
+					decisions, ensuring their business runs smoothly and effectively. </p>
+				<p class="text-center to-animate"><a href="#" class="btn btn-primary btn-outline">Get in touch</a></p>
+			</div>
+		</div>
+
+		<div id="fh5co-sayings">
+			<div class="container">
+				<div class="row to-animate">
+
+					<div class="flexslider">
+						<ul class="slides">
+
+							<li>
+								<blockquote>
+									<p>&ldquo;Efficiency is doing things right; effectiveness is doing the right things.&rdquo;</p>
+									<p class="quote-author">&mdash; Peter Drucker</p>
+								</blockquote>
+							</li>
+							<li>
+								<blockquote>
+									<p>&ldquo;The key to success is in simplifying complexity and creating streamlined systems.&rdquo;</p>
+									<p class="quote-author">&mdash; Anonymous</p>
+								</blockquote>
+							</li>
+							<li>
+								<blockquote>
+									<p>&ldquo;Good management is the art of making problems so interesting that everyone wants to get to
+										work and deal with them.&rdquo;</p>
+									<p class="quote-author">&mdash; Paul Hawken</p>
+								</blockquote>
+							</li>
+							<li>
+								<blockquote>
+									<p>&ldquo;Automation is the future, but integration is the key to success today.&rdquo;</p>
+									<p class="quote-author">&mdash; Anonymous</p>
+								</blockquote>
+							</li>
+						
+						</ul>
+						
+					</div>
+
+				</div>
+			</div>
+		</div>
+
+
+
+		<div id="fh5co-events" data-section="events" style="background-image: url(images/ERP3.jpg);"
+			data-stellar-background-ratio="0.5">
+			<div class="fh5co-overlay"></div>
+			<div class="container">
+				<div class="row text-center fh5co-heading row-padded">
+					<div class="col-md-8 col-md-offset-2 to-animate">
+						<h2 class="heading">Our Goals</h2>
+						<p class="sub-heading">Welcome to our ERP platform, designed to revolutionize the way businesses operate. Our mission is to simplify, optimize, and empower enterprises with cutting-edge solutions, driving growth and efficiency across all departments.</p>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="fh5co-event to-animate-2">
+							<h3>Operational Excellence:</h3>
+							<p>Transform business processes with automation and integration, enabling your team to focus on growth while eliminating manual inefficiencies.</p>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="fh5co-event to-animate-2">
+							<h3>Holistic Management:</h3>
+							<p>Unify critical operations like inventory tracking, workforce management, and financial planning under one robust system to enhance collaboration and control.</p>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="fh5co-event to-animate-2">
+							<h3>Empowered Decision-Making:</h3>
+							<p>Leverage real-time insights and analytics to make smarter, data-driven decisions that optimize resources and improve profitability.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			
+		</div>
+
+		<div id="fh5co-contact" data-section="reservation">
+			<div class="container">
+				<div class="row text-center fh5co-heading row-padded">
+					<div class="col-md-8 col-md-offset-2">
+						<h2 class="heading to-animate">Contact Us</h2>
+						<p class="sub-heading to-animate">"Have questions about streamlining your business? Our contact page is your go-to resource for inquiries about our ERP solutions, services, or how we can help transform your operations."</p>
+					</div>					
+				</div>
+				<div class="row">
+					<div class="col-md-6 to-animate-2">
+						<h3>Contact Info</h3>
+						<ul class="fh5co-contact-info">
+							<li class="fh5co-contact-address ">
+								<i class="icon-home"></i>
+								DevSquad' ERP, <br>Thapar Unive$ity, Patiala
+							</li>
+							<li><i class="icon-phone"></i> XXXXXXXXXX</li>
+							<li><i class="icon-envelope"></i>ERPinfo@gmail.com</li>
+							<li><i class="icon-globe"></i> <a href="index.html" target="_blank">www.ERPSystem.com</a>
+							</li>
+						</ul>
+					</div>
+					<div class="col-md-6 to-animate-2">
+						<h3>Reservation Form</h3>
+						<div class="form-group ">
+							<label for="name" class="sr-only">Name</label>
+							<input id="name" class="form-control" placeholder="Name" type="text">
+						</div>
+						<div class="form-group ">
+							<label for="email" class="sr-only">Email</label>
+							<input id="email" class="form-control" placeholder="Email" type="email">
+						</div>
+						<div class="form-group">
+							<label for="occation" class="sr-only">Name</label>
+							<select class="form-control" id="occation">
+								<!---	<option>Select an Occation</option>-->
+								<!--<option>Wedding Ceremony</option>-->
+								<option>Mobile</option>
+								<option>Othe$</option>
+							</select>
+						</div>
+						<div class="form-group ">
+							<label for="date" class="sr-only">Date</label>
+							<input id="date" class="form-control" placeholder="Date &amp; Time" type="text">
+						</div>
+
+
+
+						<div class="form-group ">
+							<label for="message" class="sr-only">Message</label>
+							<textarea name="" id="message" cols="30" rows="5" class="form-control"
+								placeholder="Message"></textarea>
+						</div>
+						<div class="form-group ">
+							<input class="btn btn-primary" value="Send Message" type="submit">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+	</div>
+
+	<div id="fh5co-footer">
+		<div class="container">
+			<div class="row row-padded">
+				<div class="col-md-12 text-center">
+					<p class="to-animate">&copy; 2024 ERP
+					</p>
+					<p class="text-center to-animate"><a href="#" class="js-gotop">Go To Top</a></p>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-12 text-center">
+					<ul class="fh5co-social">
+						<li class="to-animate-2"><a href="#"><i class="icon-facebook"></i></a></li>
+						<li class="to-animate-2"><a href="#"><i class="icon-twitter"></i></a></li>
+						<li class="to-animate-2"><a href="#"><i class="icon-instagram"></i></a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+
+
+
+
+	<!-- jQuery -->
+	<script src="js/jquery.min.js"></script>
+	<!-- jQuery Easing -->
+	<script src="js/jquery.easing.1.3.js"></script>
+	<!-- Bootstrap -->
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+		crossorigin="anonymous"></script>
+	<script src="js/bootstrap.min.js"></script>
+	<!-- Bootstrap DateTimePicker -->
+	<script src="js/moment.js"></script>
+	<script src="js/bootstrap-datetimepicker.min.js"></script>
+	<!-- Waypoints -->
+	<script src="js/jquery.waypoints.min.js"></script>
+	<!-- Stellar Parallax -->
+	<script src="js/jquery.stellar.min.js"></script>
+
+	<!-- Flexslider -->
+	<script src="js/jquery.flexslider-min.js"></script>
+	<script>
+		$(function () {
+			$('#date').datetimepicker();
+		});
+	</script>
+	<!-- Main JS -->
+	<script src="js/main.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f1f5f9;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: white;
+            padding: 20px;
+            position: fixed;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+        }
+
+        .nav-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            width: 70%;
+            margin: 0 auto;
+            height: 300px;
+        }
+
+        #revenueChart {
+            max-height: 250px !important;
+        }
+
+        .orders-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .status.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #dcfce7;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        h2 {
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </div>
+            <div class="nav-item ">
+                <i class="fas fa-home"></i> <a href="index.html"
+                    style="text-decoration: none;color: black;">Overview</a>
+            </div>
+            <div class="nav-item active">
+                <i class="fas fa-dollar-sign"></i> <a href="finance.html"
+                    style="text-decoration: none;color:white">Financial</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-box"></i> <a href="inventory.html"
+                    style="text-decoration: none;color:black">Inventory</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-users"></i> <a href="employees.html"
+                    style="text-decoration: none;color:black">Employees</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-comments"></i> <a href="communication.html"
+                    style="text-decoration: none;color:black">Communication</a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h1>Welcome back, Owner!</h1>
+                <div class="user-info">
+                    <i class="fas fa-bell"></i>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </div>
+
+            <!-- Daily Revenue Chart -->
+            <div class="chart-card">
+                <h2>Daily Revenue</h2>
+                <canvas id="revenueChart"></canvas>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="orders-container">
+                <h2>Recent Orders</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable">
+                        <!-- Orders will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        Stock alert: Item running low!
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script>
+        // Fetch recent orders and update the table
+        async function fetchOrders() {
+            try {
+                const response = await fetch('/api/orders');
+                const orders = await response.json();
+
+                // Populate the orders table
+                const ordersTable = document.getElementById('ordersTable');
+                ordersTable.innerHTML = ''; // Clear any existing rows
+                orders.forEach(order => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                <td>${order.order_id}</td>
+                <td>${order.customer}</td>
+                <td>${order.amount}</td>
+                <td><span class="status ${order.status.toLowerCase()}">${order.status}</span></td>
+            `;
+                    ordersTable.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching orders:', error);
+            }
+        }
+
+        // Load the orders on page load
+        fetchOrders();
+
+        // Set up the chart
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [], // Days of the week
+                datasets: [{
+                    label: 'Total Revenue ($)',
+                    data: [], // Revenue data
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Fetch data and update the chart
+        async function fetchStatistics() {
+            try {
+                const response = await fetch('/api/statistics');
+                const data = await response.json();
+
+                // Parse the data
+                const labels = data.map(stat => stat.day);
+                const values = data.map(stat => parseFloat(stat.total_revenue));
+
+                // Update the chart
+                revenueChart.data.labels = labels;
+                revenueChart.data.datasets[0].data = values;
+                revenueChart.update();
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        }
+
+        // Load the statistics on page load
+        fetchStatistics();
+
+
+        // Sample data for the orders table
+        const orders = [
+            { id: '001', customer: 'John Doe', amount: '$350', status: 'completed' },
+            { id: '002', customer: 'Jane Smith', amount: '$280', status: 'pending' },
+            { id: '003', customer: 'Bob Johnson', amount: '$420', status: 'completed' }
+        ];
+
+        // Populate the orders table
+        const ordersTable = document.getElementById('ordersTable');
+        orders.forEach(order => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${order.id}</td>
+                <td>${order.customer}</td>
+                <td>${order.amount}</td>
+                <td><span class="status ${order.status}">${order.status}</span></td>
+            `;
+            ordersTable.appendChild(row);
+        });
+    </script>
+</body>
+
+</html>

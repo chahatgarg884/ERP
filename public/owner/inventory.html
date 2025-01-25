@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management Page</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/owner-inventory.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="../script/angular.min.js"></script>
+
+    <script>
+
+
+        //=============================================
+        $(document).ready(function () {
+            //--------------------------
+            $("#avail").click(function () {
+                var productNameku = $("#productName").val();
+                var orderQuantityku = $("#orderQuantity").val();
+                var cpku = $("#costPrice").val();
+                var spku = parseFloat(cpku) + (parseFloat(cpku) / 10);
+
+                var obj = {
+                    type: "get",
+                    url: "/submit",
+                    data: {
+                        productName: productNameku,
+                        orderQuantity: orderQuantityku,
+                        costPrice: cpku,
+                        sellingPrice: spku
+                    }
+                }
+                $.ajax(obj).done(function (respkuch1) {
+                    alert("Order Placed");
+                    $("#avail-submit").html(respkuch1);
+                }).fail(function (errkuch1) {
+                    $("#avail-submit").html(errkuch1);
+                })
+
+            });
+        });
+    </script>
+
+<script>
+    $(document).ready(function () {
+        fetchInventory();
+
+        function fetchInventory() {
+            $.ajax({
+                type: "GET",
+                url: "/getInventory",
+                success: function (data) {
+                    populateInventoryTable(data);
+                    updateStatistics(data); // Call the update statistics function after populating the table
+                },
+                error: function (err) {
+                    console.error("Error fetching inventory data:", err);
+                }
+            });
+        }
+
+        function populateInventoryTable(data) {
+            $("#inventoryTable tbody").empty();
+
+            data.forEach(item => {
+                const row = `
+                <tr>
+                    <td>${item.product_name}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.cp}</td>
+                    <td>${item.sp}</td>
+                </tr>
+                `;
+                $("#inventoryTable tbody").append(row);
+            });
+        }
+
+        function updateStatistics(data) {
+            let totalItems = 0;
+            let totalValue = 0;
+
+            data.forEach(item => {
+                totalItems += parseInt(item.quantity, 10); // Sum up the quantities
+                totalValue += item.quantity * item.sp; // Calculate total value (quantity * cost price)
+            });
+
+            // Update the statistics section
+            $(".statistics p:nth-child(2)").text(`Total Items: ${totalItems}`);
+            $(".statistics p:nth-child(3)").text(`Total Value: $${totalValue.toFixed(2)}`);
+        }
+    });
+</script>
+
+</head>
+
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-home"></i> <a href="index.html"
+                    style="text-decoration: none;color: black;">Overview</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-dollar-sign"></i> <a href="finance.html"
+                    style="text-decoration: none;color:black">Financial</a>
+            </div>
+            <div class="nav-item active">
+                <i class="fas fa-box"></i> <a href="inventory.html"
+                    style="text-decoration: none;color:white">Inventory</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-users"></i> <a href="employees.html"
+                    style="text-decoration: none;color:black">Employees</a>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-comments"></i> <a href="communication.html"
+                    style="text-decoration: none;color:black">Communication</a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="profile">
+                <div class="profile-icon" onclick="toggleProfileMenu()">
+                    <i class="fas fa-user-circle fa-2x"></i>
+                    <span>Worker Name</span>
+                </div>
+                <div class="profile-menu" id="profileMenu">
+                    <div class="profile-menu-item" onclick="openProfile()">Profile</div>
+                    <div class="profile-menu-item" onclick="openSettings()">Settings</div>
+                    <div class="profile-menu-item" onclick="logout()">Log Out</div>
+                </div>
+            </div>
+
+            <!-- Content Container -->
+            <div class="content-container">
+                <!-- Left Section -->
+                <div class="left-section">
+                    <div class="inventory-list">
+                        <h2>Inventory List</h2>
+                        <table id="inventoryTable">
+                            <thead>
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th>Quantity</th>
+                                    <th>Cost Price</th>
+                                    <th>Selling Price</th>
+                                   
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Inventory items will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right Section -->
+                <div class="right-section">
+                    <div class="place-order-form">
+                        <h2>Place Order</h2>
+                        <form id="placeOrderForm" method="post" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="supplierName">Supplier</label>
+                                <select id="supplierName" name="supplierName">
+                                    <option>Select Supplier</option>
+                                    <option>Supplier 1</option>
+                                    <option>Supplier 2</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="productName">Product Name</label>
+                                <input type="text" id="productName" name="productName" placeholder="Enter product name"
+                                    required>
+                            </div>
+                            <div class="form-group">
+                                <label for="orderDate">Order Date</label>
+                                <input type="date" id="orderDate" name="orderDate">
+                            </div>
+                            <div class="form-group">
+                                <label for="paymentMethod">Payment Method</label>
+                                <select id="paymentMethod" name="paymentMethod">
+                                    <option>Cash</option>
+                                    <option>Credit Card</option>
+                                    <option>Bank Transfer</option>
+                                </select>
+                            </div>
+                            <!-- Wrapper for Quantity and Cost Price -->
+                            <div style="display: flex; gap: 1rem;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="orderQuantity">Quantity</label>
+                                    <input type="number" id="orderQuantity" name="orderQuantity"
+                                        placeholder="Enter quantity">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="costPrice">Cost Price</label>
+                                    <input type="text" id="costPrice" name="costPrice" placeholder="Enter cost price"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="orderNotes">Special Instructions</label>
+                                <textarea id="orderNotes" name="specialInstructions"
+                                    placeholder="Add any special instructions..."></textarea>
+                            </div>
+                            <button class="btn" id="avail" name="avail" type="button" formaction="/submit">Place
+                                Order</button>
+                        </form>
+                    </div>
+                    <div class="statistics">
+                        <h2>Statistics</h2>
+                        <p>Total Items: 0</p>
+                        <p>Total Value: $0.00</p>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Profile Menu Functionality
+        function toggleProfileMenu() {
+            document.getElementById('profileMenu').classList.toggle('active');
+        }
+
+        function openProfile() {
+            alert('Open Profile');
+        }
+
+        function openSettings() {
+            alert('Open Settings');
+        }
+
+        function logout() {
+            alert('Log Out');
+        }
+    </script>
+    <script>
+        // Function to display low stock notifications
+        function showLowStockNotification(productName) {
+            const notification = document.getElementById('notification');
+            notification.textContent = `Stock alert: ${productName} is running low!`;
+            notification.style.display = 'block'; // Display the notification
+
+            setTimeout(() => {
+                notification.style.display = 'none'; // Hide notification after 5 seconds
+            }, 5000);
+        }
+
+        // Function to check stock every minute
+        function checkLowStock() {
+    fetch('/getInventoryStatus')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Fetched Data:', data); // Log the data to inspect its structure
+
+            // Loop through each item to check if stock is low
+            data.forEach(item => {
+                console.log('Item:', item); // Log each item to see its structure
+
+                // Check if the item has low stock and access the product name correctly
+                if (item.status === 'Low Stock' && item.quantity < 10) {
+                    const productName = item.category || "Unknown Product"; // Access category instead of productName
+                    showLowStockNotification(productName); // Show the notification
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching inventory data:', error);
+        });
+}
+
+        // Run the stock check every minute (10000 ms)
+        setInterval(checkLowStock, 10000);
+
+        // Run initial check immediately on page load
+        checkLowStock();
+
+    </script>
+</body>
+
+</html>

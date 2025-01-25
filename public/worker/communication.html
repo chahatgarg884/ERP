@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Communication Page</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="../script/angular.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --sidebar-width: 250px;
+            --chat-background: #f1f1f1;
+            --message-background: #ffffff;
+            --my-message-color: #dcf8c6;
+        }
+
+        body {
+            background: #f9fafb;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: white;
+            padding: 20px;
+            position: fixed;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: #f3f4f6;
+        }
+
+        .nav-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            width: calc(100% - var(--sidebar-width));
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        /* Profile Dropdown */
+        .profile {
+            position: relative;
+        }
+
+        .profile-icon {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .profile-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 40px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            z-index: 1000;
+        }
+
+        .profile-menu.active {
+            display: block;
+        }
+
+        .profile-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .profile-menu-item:hover {
+            background: #f3f4f6;
+        }
+
+        /* Chat Interface Styles */
+        .chat-container {
+            flex: 1;
+            background: var(--chat-background);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: white;
+            max-height: 400px;
+            /* Set a max height for the chat window */
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 75%;
+        }
+
+        .message.owner {
+            background: var(--message-background);
+            align-self: flex-start;
+        }
+
+        .message.worker {
+            background: var(--my-message-color);
+            align-self: flex-end;
+        }
+
+        .input-container {
+            display: flex;
+        }
+
+        .input-container input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .input-container button {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Adjust message alignment */
+        .message.owner {
+            background: var(--message-background);
+            align-self: flex-start;
+            /* Owner's message on the left */
+        }
+
+        .message.worker {
+            background: var(--my-message-color);
+            align-self: flex-end;
+            /* Worker’s message on the right */
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 75%;
+        }
+
+        /* Owner's message on the left */
+        .message.owner {
+            background: var(--message-background);
+            align-self: flex-start;
+        }
+
+        /* Worker’s message on the right */
+        .message.worker {
+            background: var(--my-message-color);
+            align-self: flex-end;
+        }
+
+        /* Make the messages container a flex container */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: white;
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+            /* Stack messages vertically */
+            justify-content: flex-start;
+            /* Align messages from top to bottom */
+        }
+
+        /* Style for both worker and owner messages */
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 75%;
+            display: inline-block;
+        }
+
+        /* Worker’s message on the right side */
+        .message.worker {
+            background: var(--my-message-color);
+            align-self: flex-end;
+            /* Align worker messages to the right */
+        }
+
+        /* Owner’s message on the left side */
+        .message.owner {
+            background: var(--message-background);
+            align-self: flex-start;
+            /* Align owner messages to the left */
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 75%;
+            word-wrap: break-word;
+            /* This ensures the text wraps instead of overflowing */
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+
+        /* Owner’s message on the left */
+        .message.owner {
+            background: var(--message-background);
+            align-self: flex-start;
+        }
+
+        /* Worker’s message on the right */
+        .message.worker {
+            background: var(--my-message-color);
+            align-self: flex-end;
+        }
+    </style>
+    <script>
+        var workerN = '';
+        $(document).ready(function () {
+
+            function setActiveUser() {
+                var au = localStorage.getItem("activeKuch");
+
+                // Fetch worker information based on the active user
+                $.ajax({
+                    url: '/api/worker-info',  // Your backend endpoint to get worker info
+                    method: 'POST',
+                    data: { username: au },
+                    success: function (response) {
+                        // Assuming the response contains worker details, you can update UI accordingly
+                        if (response && response.worker) {
+                            // Example: Display worker's full name and role
+                            workerN = response.worker.name;
+                            $("#worker_name").text(response.worker.name);
+                            // You can display more worker details based on response
+                        }
+                    },
+                    error: function (error) {
+                        console.error('Error fetching worker info:', error);
+                    }
+                });
+            }
+            setActiveUser();
+        });
+
+    </script>
+    <script>
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const messageText = messageInput.value.trim();
+            const workerName = workerN;  // Worker name from the earlier response
+
+            if (messageText) {
+                // Clear the input field after sending the message
+                messageInput.value = '';
+
+                // Trigger the alert for debugging
+                alert("Message Sent!");
+
+                // Send the message to the server and store it in the database
+                $.ajax({
+                    url: '/api/save-message',
+                    method: 'POST',
+                    data: JSON.stringify({ chat: messageText, name: workerName }),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        console.log('Message saved successfully:', response);
+                    },
+                    error: function (error) {
+                        console.error('Error saving message:', error);
+                    }
+                });
+
+                // Simulated owner's response is removed now
+                // No code to append owner's reply to the chatbox
+            }
+        }
+
+    </script>
+    <script>
+        $(document).ready(function () {
+
+            function setActiveUser() {
+                var au = localStorage.getItem("activeKuch");
+
+                // Fetch worker information based on the active user
+                $.ajax({
+                    url: '/api/worker-info',  // Your backend endpoint to get worker info
+                    method: 'POST',
+                    data: { username: au },
+                    success: function (response) {
+                        if (response && response.worker) {
+                            workerN = response.worker.name;
+                            $("#worker_name").text(response.worker.name);
+                            fetchMessages(workerN); // Fetch messages once worker info is set
+                        }
+                    },
+                    error: function (error) {
+                        console.error('Error fetching worker info:', error);
+                    }
+                });
+            }
+
+            // Fetch chat messages from the database
+            function fetchMessages(workerName) {
+                $.ajax({
+                    url: '/api/fetch-messages',  // Backend endpoint
+                    method: 'POST',
+                    data: JSON.stringify({ workerName: workerName }),  // Send worker's name
+                    contentType: 'application/json',
+                    success: function (response) {
+                        if (response.messages) {
+                            const messagesContainer = $('#messages');
+                            messagesContainer.empty(); // Clear any existing messages
+
+                            // Loop through messages and add them to the chat
+                            response.messages.forEach(function (message) {
+                                let messageClass = '';
+
+                                // Check status and decide the alignment (left or right)
+                                if (message.status === 1) {
+                                    messageClass = 'owner';  // Display on the left side
+                                } else if (message.status === 2) {
+                                    messageClass = 'worker';  // Display on the right side
+                                }
+
+                                const messageHTML = `<div class="message ${messageClass}">
+                                            <p>${message.chat}</p>
+                                            <span>${new Date(message.timestamp).toLocaleString()}</span>
+                                        </div>`;
+                                messagesContainer.append(messageHTML);
+                            });
+
+                            // Scroll to the bottom of the chat
+                            messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+                        }
+                    },
+                    error: function (error) {
+                        console.error('Error fetching messages:', error);
+                    }
+                });
+            }
+
+            setActiveUser();
+        });
+
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-toolbox"></i> Worker Dashboard
+            </div>
+            <div class="nav-item" onclick="window.location.href='worker.html'">
+                <i class="fas fa-home"></i> Dashboard
+            </div>
+            <div class="nav-item" onclick="window.location.href='inventory.html'">
+                <i class="fas fa-boxes"></i> Manage Inventory
+            </div>
+            <div class="nav-item" onclick="window.location.href='financial.html'">
+                <i class="fas fa-file-invoice-dollar"></i> Financial Records
+            </div>
+            <div class="nav-item active" onclick="window.location.href='communication.html'">
+                <i class="fas fa-comments"></i> Communication
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h1>Chat with Owner</h1>
+                <div class="profile">
+                    <div class="profile-icon" onclick="toggleProfileMenu()">
+                        <i class="fas fa-user-circle fa-2x"></i>
+                        <span id="worker_name"></span>
+                    </div>
+                    <div class="profile-menu" id="profileMenu">
+                        <div class="profile-menu-item" onclick="openProfile()">Profile</div>
+                        <div class="profile-menu-item" onclick="openSettings()">Settings</div>
+                        <div class="profile-menu-item" onclick="logout()">Log Out</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div class="chat-container">
+                <div class="messages" id="messages">
+                    <!-- Chat messages will be dynamically inserted here -->
+                </div>
+                <div class="input-container">
+                    <input type="text" id="messageInput" placeholder="Type your message..." />
+                    <button onclick="sendMessage()">Send</button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Profile Menu Functionality
+        function toggleProfileMenu() {
+            const profileMenu = document.getElementById('profileMenu');
+            profileMenu.classList.toggle('active');
+        }
+
+        function openProfile() {
+            alert('Open Profile');
+        }
+
+        function openSettings() {
+            alert('Open Settings');
+        }
+
+        function logout() {
+            alert('Logged Out');
+        }
+        // Close the profile menu when clicking outside
+        document.addEventListener('click', function (event) {
+            const profileMenu = document.getElementById('profileMenu');
+            const profileIcon = document.querySelector('.profile-icon');
+            if (!profileIcon.contains(event.target) && !profileMenu.contains(event.target)) {
+                profileMenu.classList.remove('active');
+            }
+        });
+    </script>
+
+
+</body>
+
+</html>

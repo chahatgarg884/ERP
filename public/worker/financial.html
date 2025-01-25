@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Records</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="../script/angular.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f9fafb;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: white;
+            padding: 20px;
+            position: fixed;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: #f3f4f6;
+        }
+
+        .nav-item.active {
+            background: #e5f7ef;
+            color: var(--primary-color);
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            width: calc(100% - var(--sidebar-width));
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Profile Dropdown */
+        .profile {
+            position: relative;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .profile-icon {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .profile-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 40px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            z-index: 1000;
+        }
+
+        .profile-menu.active {
+            display: block;
+        }
+
+        .profile-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .profile-menu-item:hover {
+            background: #f3f4f6;
+        }
+
+        /* Form Styles */
+        .record-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .record-form label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        .record-form input[type="number"],
+        .record-form input[type="date"],
+        .record-form input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+
+        .record-form button {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .record-form button:hover {
+            background: #0e9f75;
+        }
+
+        /* Table Styles */
+        .record-table {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border-collapse: collapse;
+            overflow-x: auto;
+        }
+
+        .record-table th,
+        .record-table td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .record-table th {
+            background: #f3f4f6;
+            font-weight: bold;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #6ee7b7;
+            --border-color: #d1d5db;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f9fafb;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        /* Form Styles */
+        .record-form {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 20px auto;
+        }
+
+        .record-form h2 {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .record-form label {
+            display: block;
+            margin: 15px 0 5px;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .record-form input[type="text"],
+        .record-form input[type="number"],
+        .record-form select,
+        .record-form input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background: #f9fafb;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .record-form input:focus,
+        .record-form select:focus {
+            border-color: var(--primary-color);
+        }
+
+        .record-form button {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .record-form button:hover {
+            background: #0e9f75;
+            transform: scale(1.02);
+        }
+
+        .record-form button:active {
+            background: #0c7c5e;
+            transform: scale(0.98);
+        }
+
+        .record-form input::placeholder {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        .record-form select {
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 20 20" fill="%239CA3AF"><path d="M0 0h20l-10 10z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 10px;
+        }
+
+        .record-form select:focus {
+            background-position: right 12px center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+    </style>
+    <script>
+        async function addRecord(event) {
+            event.preventDefault();
+            const customer_id = document.getElementById('customer').value;
+            const amount = document.getElementById('amount').value;
+            const status = document.getElementById('status').value;
+            const bills = document.getElementById('bills').value;
+
+            const response = await fetch('/api/financial-records', { // Relative URL
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customer_id, amount, status, bills }),
+            });
+
+            if (response.ok) {
+                alert('Record added successfully!');
+                window.location.reload();
+            } else {
+                alert('Failed to add record');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchRecords);
+    </script>
+     <script>
+        var module=angular.module("myModule",[]);
+        module.controller("myController",function($scope,$http){
+                
+
+
+                $scope.jsonArray;
+                //=================
+                $scope.fetchRecords=function()
+                {
+                    var url="/get-angular-all-records";
+                    $http.get(url).then(done,fail);
+                    function done(response)
+                        {
+                            // alert(JSON.stringify(response.data));
+                            $scope.jsonArray=response.data;
+
+                        }
+                     function fail(response)
+                        {
+                                alert(response.data);
+                        }   
+                }
+                $scope.fetchRecords(); 
+                
+        })
+    </script>
+    <script>
+        $(document).ready(function() {
+     function setActiveUser() {
+         var au = localStorage.getItem("activeKuch");
+ 
+         // Fetch worker information based on the active user
+         $.ajax({
+             url: '/api/worker-info',  // Your backend endpoint to get worker info
+             method: 'POST',
+             data: { username: au },
+             success: function(response) {
+                 // Assuming the response contains worker details, you can update UI accordingly
+                 if (response && response.worker) {
+                     // Example: Display worker's full name and role
+                     $("#worker_name").text(response.worker.name);
+                     // You can display more worker details based on response
+                 }
+             },
+             error: function(error) {
+                 console.error('Error fetching worker info:', error);
+             }
+         });
+     }
+     
+     setActiveUser();
+ });
+ 
+     </script>
+</head>
+
+<body ng-app="myModule" ng-controller="myController">
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-toolbox"></i> Worker Dashboard
+            </div>
+            <div class="nav-item" onclick="window.location.href='worker.html'">
+                <i class="fas fa-home"></i> Dashboard
+            </div>
+            <div class="nav-item" onclick="window.location.href='inventory.html'">
+                <i class="fas fa-boxes"></i> Manage Inventory
+            </div>
+            <div class="nav-item active" onclick="window.location.href='financial.html'">
+                <i class="fas fa-file-invoice-dollar"></i> Financial Records
+            </div>
+            <div class="nav-item" onclick="window.location.href='communication.html'">
+                <i class="fas fa-comments"></i> Communication
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Profile Section -->
+            <div class="profile">
+                <div class="profile-icon" onclick="toggleProfileMenu()">
+                    <i class="fas fa-user-circle fa-2x"></i>
+                    <span id="worker_name"></span>
+                </div>
+                <div class="profile-menu" id="profileMenu">
+                    <div class="profile-menu-item" onclick="openProfile()">Profile</div>
+                    <div class="profile-menu-item" onclick="openSettings()">Settings</div>
+                    <div class="profile-menu-item" onclick="logout()">Log Out</div>
+                </div>
+            </div>
+
+            <!-- Financial Records Form -->
+            <div class="record-form" style="width: 100%; max-width: 500px; margin: 0 auto;">
+                <h2>Financial Record Entry</h2>
+                <form onsubmit="addRecord(event)">
+                    <label for="customer">Customer:</label>
+                    <input type="text" id="customer" required><br>
+
+                    <label for="amount">Amount:</label>
+                    <input type="number" id="amount" step="0.01" required><br>
+
+                    <label for="status">Status:</label>
+                    <select id="status" required>
+                        <option value="Pending">Pending</option>
+                        <option value="Completed">Completed</option>
+                    </select><br>
+
+                    <label for="bills">Bills (optional):</label>
+                    <input type="text" id="bills" placeholder="File path or URL"><br>
+
+                    <button type="submit">Add Record</button>
+                </form>
+            </div>
+
+
+            <!-- Financial Records Table -->
+            <table class="record-table" id="recordTable">
+                <thead>
+                    <tr>
+                        <th>Order Id</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="recordTableBody">
+                    <tr ng-repeat="obj in jsonArray" >
+                        <td>{{obj.order_id}}</td>
+                        <td>{{obj.customer}}</td>
+                        <td>{{obj.amount}}</td>
+                        <td>{{obj.status}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+
+        // Profile Menu Functionality
+        function toggleProfileMenu() {
+            const profileMenu = document.getElementById('profileMenu');
+            profileMenu.classList.toggle('active');
+        }
+
+        function openProfile() {
+            alert('Open Profile');
+        }
+
+        function openSettings() {
+            alert('Open Settings');
+        }
+
+        function logout() {
+            alert('Logged Out');
+        }
+
+        // Close the profile menu when clicking outside
+        document.addEventListener('click', function (event) {
+            const profileMenu = document.getElementById('profileMenu');
+            const profileIcon = document.querySelector('.profile-icon');
+            if (!profileIcon.contains(event.target) && !profileMenu.contains(event.target)) {
+                profileMenu.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+
+</html>

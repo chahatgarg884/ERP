@@ -49,7 +49,7 @@ dbCon.connect(function (err) {
 
 //==================Log In================
 app.get("/chk-login-submit", function (req, resp) {
-  dbCon.query("select * from erp_register where username=? && password=? ", [req.query.kuchemail, req.query.kuchpwd], function (err, resultJSONTable) {
+  dbCon.query("select * from erp_erp_register where username=? && password=? ", [req.query.kuchemail, req.query.kuchpwd], function (err, resultJSONTable) {
     if (err == null) {
       if (resultJSONTable.length > 0) {
         if (resultJSONTable[0].status == 1 || resultJSONTable[0].status == 2) {
@@ -73,7 +73,7 @@ app.get("/submit", function (req, resp) {
 
   // Query to check if the product with the same name and cost price exists
   dbCon.query(
-    "SELECT * FROM erp_inventory WHERE product_name = ? AND cp = ?",
+    "SELECT * FROM erp_erp_inventory WHERE product_name = ? AND cp = ?",
     [productName, costPrice],
     function (err, result) {
       if (err) {
@@ -81,7 +81,7 @@ app.get("/submit", function (req, resp) {
       } else if (result.length > 0) {
         // Product with the same name and cost price exists, update the quantity
         dbCon.query(
-          "UPDATE erp_inventory SET quantity = quantity + ? WHERE product_name = ? AND cp = ?",
+          "UPDATE erp_erp_inventory SET quantity = quantity + ? WHERE product_name = ? AND cp = ?",
           [orderQuantity, productName, costPrice],
           function (updateErr) {
             if (updateErr) {
@@ -94,7 +94,7 @@ app.get("/submit", function (req, resp) {
       } else {
         // Product does not exist, insert a new record
         dbCon.query(
-          "INSERT INTO erp_inventory(product_name, quantity, cp, sp) VALUES(?,?,?,?)",
+          "INSERT INTO erp_erp_inventory(product_name, quantity, cp, sp) VALUES(?,?,?,?)",
           [productName, orderQuantity, costPrice, sellingPrice],
           function (insertErr) {
             if (insertErr) {
@@ -109,47 +109,47 @@ app.get("/submit", function (req, resp) {
   );
 });
 
-app.get("/getInventory", (req, resp) => {
-  dbCon.query("SELECT * FROM erp_inventory", (err, results) => {
+app.get("/geterp_inventory", (req, resp) => {
+  dbCon.query("SELECT * FROM erp_erp_inventory", (err, results) => {
     if (err) {
-      resp.status(500).send("Error fetching inventory data");
+      resp.status(500).send("Error fetching erp_inventory data");
     } else {
       resp.json(results);
     }
   });
 });
 
-app.post('/updateInventory', (req, res) => {
+app.post('/updateerp_inventory', (req, res) => {
   const { itemId, quantity } = req.body;
 
-  // SQL query to update the inventory
-  const query = "UPDATE erp_inventory SET quantity = ? WHERE id = ?";
+  // SQL query to update the erp_inventory
+  const query = "UPDATE erp_erp_inventory SET quantity = ? WHERE id = ?";
   dbCon.query(query, [quantity, itemId], (err, result) => {
     if (err) {
-      console.error("Error updating inventory:", err);
+      console.error("Error updating erp_inventory:", err);
       return res.status(500).send("Internal Server Error");
     }
-    res.send("Inventory updated successfully");
+    res.send("erp_inventory updated successfully");
   });
 });
 
-app.post('/saveStatistics', (req, res) => {
+app.post('/saveerp_statistics', (req, res) => {
   const { totalItemsSold, totalValueGet } = req.body;
 
-  const query = "INSERT INTO erp_statistics (total_items_sold, total_value_get, timestamp) VALUES (?, ?, NOW())";
+  const query = "INSERT INTO erp_erp_statistics (total_items_sold, total_value_get, timestamp) VALUES (?, ?, NOW())";
   dbCon.query(query, [totalItemsSold, totalValueGet], (err, result) => {
     if (err) {
-      console.error('Error saving statistics:', err);
-      return res.status(500).json({ message: 'Failed to save statistics' });
+      console.error('Error saving erp_statistics:', err);
+      return res.status(500).json({ message: 'Failed to save erp_statistics' });
     }
-    res.status(200).json({ message: 'Statistics saved successfully' });
+    res.status(200).json({ message: 'erp_statistics saved successfully' });
   });
 });
 
-app.get('/api/statistics', (req, res) => {
+app.get('/api/erp_statistics', (req, res) => {
   const query = `
     SELECT day, SUM(total_value_get) AS total_revenue 
-    FROM statistics 
+    FROM erp_statistics 
     GROUP BY day 
     ORDER BY FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
   `;
@@ -166,7 +166,7 @@ app.get('/api/statistics', (req, res) => {
 // Add a financial record
 app.post('/api/financial-records', (req, res) => {
   const { customer_id, amount, status, bills } = req.body;
-  const query = 'INSERT INTO financial_records (customer, amount, status, bills,timestamp) VALUES (?, ?, ?, ?,NOW())';
+  const query = 'INSERT INTO erp_financial_records (customer, amount, status, bills,timestamp) VALUES (?, ?, ?, ?,NOW())';
   dbCon.query(query, [customer_id, amount, status, bills || null], (err, results) => {
     if (err) {
       res.status(500).json({ error: 'Failed to add record' });
@@ -178,7 +178,7 @@ app.post('/api/financial-records', (req, res) => {
 
 app.get("/get-angular-all-records", function (req, resp) {
   //fixed                               //same seq. as in table
-  dbCon.query("SELECT * FROM financial_records ;", function (err, resultTableJSON) {
+  dbCon.query("SELECT * FROM erp_financial_records ;", function (err, resultTableJSON) {
     if (err == null)
       resp.send(resultTableJSON);
     else
@@ -189,7 +189,7 @@ app.get("/get-angular-all-records", function (req, resp) {
 app.get('/api/orders', async (req, res) => {
   try {
     // Ensure you await the query result to get data
-    const [orders] = await dbCon.promise().query('SELECT * FROM financial_records ORDER BY timestamp DESC LIMIT 5');
+    const [orders] = await dbCon.promise().query('SELECT * FROM erp_financial_records ORDER BY timestamp DESC LIMIT 5');
     res.json(orders);
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -204,7 +204,7 @@ app.get("/add-employee", function (req, resp) {
     return resp.status(400).send("Missing required fields");
   }
 
-  const query = "INSERT INTO register (id, name, username, password, status) VALUES (?, ?, ?, ?, 2)";
+  const query = "INSERT INTO erp_register (id, name, username, password, status) VALUES (?, ?, ?, ?, 2)";
   dbCon.query(query, [workerId, workerName, workerUsername, workerPassword], function (err, result) {
     if (err) {
       console.error("Database error:", err);
@@ -215,7 +215,7 @@ app.get("/add-employee", function (req, resp) {
 });
 
 app.get('/get-angular-employee-records', (req, res) => {
-  const sql = "SELECT * FROM register where status!=1";
+  const sql = "SELECT * FROM erp_register where status!=1";
   dbCon.query(sql, (err, results) => {
     if (err) {
       console.error(err);
@@ -233,7 +233,7 @@ app.get("/do-angular-delete", function (req, resp) {
 
 
   //fixed                             //same seq. as in table
-  dbCon.query("delete from register where id=?", [id], function (err, result) {
+  dbCon.query("delete from erp_register where id=?", [id], function (err, result) {
     if (err == null) {
       if (result.affectedRows == 1)
         resp.send("Account Removed Successfully!");
@@ -249,7 +249,7 @@ app.get("/do-angular-block", function (req, resp) {
   var id = req.query.idkuch;
 
 
-  dbCon.query("update  register set status=0 where id=? ", [id], function (err, result) {
+  dbCon.query("update  erp_register set status=0 where id=? ", [id], function (err, result) {
     if (err == null) {
       if (result.affectedRows == 1) {
         resp.send("Updated Successfully..")
@@ -270,7 +270,7 @@ app.get("/do-angular-resume", function (req, resp) {
   var id = req.query.idkuch;
 
 
-  dbCon.query("update  register set status=2 where id=? ", [id], function (err, result) {
+  dbCon.query("update  erp_register set status=2 where id=? ", [id], function (err, result) {
     if (err == null) {
       if (result.affectedRows == 1) {
         resp.send("Updated Successfully..")
@@ -287,7 +287,7 @@ app.get("/do-angular-resume", function (req, resp) {
 })
 
 app.get('/api/workers', (req, res) => {
-  const query = 'SELECT * FROM register WHERE status = 2';
+  const query = 'SELECT * FROM erp_register WHERE status = 2';
   dbCon.query(query, (err, results) => {
     if (err) {
       console.error(err);
@@ -301,7 +301,7 @@ app.get('/api/workers', (req, res) => {
 app.post('/api/worker-info', (req, res) => {
   const { username } = req.body;
 
-  dbCon.query('SELECT * FROM register WHERE username = ?', [username], (err, result) => {
+  dbCon.query('SELECT * FROM erp_register WHERE username = ?', [username], (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to fetch worker info' });
     }
@@ -321,7 +321,7 @@ app.post('/api/save-message', (req, res) => {
   const status = 2;  // Assuming status 0 means message sent by worker
 
   // Insert the message into the database
-  const query = 'INSERT INTO communication (chat, status, name, timestamp) VALUES (?, ?, ?, ?)';
+  const query = 'INSERT INTO erp_communication (chat, status, name, timestamp) VALUES (?, ?, ?, ?)';
   dbCon.execute(query, [chat, status, name, timestamp], (err, results) => {
     if (err) {
       console.error('Error saving message:', err);
@@ -336,7 +336,7 @@ app.post('/sendMessage', (req, res) => {
   const status = 1; // Assuming 1 is the status for sent messages
   const timestamp = new Date(); // Get current timestamp
 
-  const query = 'INSERT INTO communication (chat, status, name, timestamp) VALUES (?, ?, ?, ?)';
+  const query = 'INSERT INTO erp_communication (chat, status, name, timestamp) VALUES (?, ?, ?, ?)';
   dbCon.execute(query, [chat, status, name, timestamp], (err, results) => {
     if (err) {
       console.error(err);
@@ -349,7 +349,7 @@ app.post('/sendMessage', (req, res) => {
 app.post('/api/fetch-messages', (req, res) => {
   const workerName = req.body.workerName; // Assuming worker name is sent in the request body
 
-  const query = 'SELECT * FROM communication WHERE name = ? ORDER BY timestamp ASC';
+  const query = 'SELECT * FROM erp_communication WHERE name = ? ORDER BY timestamp ASC';
   dbCon.query(query, [workerName], (error, results) => {
     if (error) {
       return res.status(500).json({ error: 'Error fetching messages' });
@@ -363,7 +363,7 @@ app.post('/api/fetch-messages', (req, res) => {
 app.get('/fetchMessages', (req, res) => {
   const workerName = req.query.workerName; // workerName is passed from the frontend
 
-  const query = `SELECT * FROM communication WHERE name = ? ORDER BY timestamp ASC`;
+  const query = `SELECT * FROM erp_communication WHERE name = ? ORDER BY timestamp ASC`;
 
   dbCon.query(query, [workerName], (err, results) => {
     if (err) {
@@ -376,7 +376,7 @@ app.get('/fetchMessages', (req, res) => {
 });
 
 app.get('/getTotalRevenue', (req, res) => {
-  const query = 'SELECT SUM(amount) AS total_revenue, COUNT(order_id) AS total_orders FROM financial_records'; // Modify this query based on your actual table structure
+  const query = 'SELECT SUM(amount) AS total_revenue, COUNT(order_id) AS total_orders FROM erp_financial_records'; // Modify this query based on your actual table structure
 
   dbCon.query(query, (err, results) => {
     if (err) {
@@ -392,7 +392,7 @@ app.get('/getTotalRevenue', (req, res) => {
 });
 
 app.get('/getTotalQuantity', (req, res) => {
-  const query = 'SELECT SUM(quantity) AS total_quantity FROM inventory'; // Modify this query based on your actual table structure
+  const query = 'SELECT SUM(quantity) AS total_quantity FROM erp_inventory'; // Modify this query based on your actual table structure
 
   dbCon.query(query, (err, results) => {
     if (err) {
@@ -406,7 +406,7 @@ app.get('/getTotalQuantity', (req, res) => {
 });
 
 app.get('/getTotalEmployee', (req, res) => {
-  const query = 'SELECT COUNT(id) AS total_employee FROM register where status=2'; // Modify this query based on your actual table structure
+  const query = 'SELECT COUNT(id) AS total_employee FROM erp_register where status=2'; // Modify this query based on your actual table structure
 
   dbCon.query(query, (err, results) => {
     if (err) {
@@ -422,7 +422,7 @@ app.get('/getTotalEmployee', (req, res) => {
 app.get('/getRevenueData', (req, res) => {
   const query = `
       SELECT DAYNAME(timestamp) AS day, SUM(total_value_get) AS total_revenue
-      FROM statistics
+      FROM erp_statistics
       GROUP BY DAYNAME(timestamp)
       ORDER BY DAYNAME(timestamp);`;
 
@@ -435,7 +435,7 @@ app.get('/getRevenueData', (req, res) => {
   });
 });
 
-app.get('/getInventoryStatus', (req, res) => {
+app.get('/geterp_inventoryStatus', (req, res) => {
   const query = `
       SELECT 
           product_name AS category, 
@@ -445,20 +445,20 @@ app.get('/getInventoryStatus', (req, res) => {
               WHEN quantity < 10 THEN 'Low Stock'
               ELSE 'Sufficient Stock'
           END AS status
-      FROM inventory;
+      FROM erp_inventory;
   `;
   
   dbCon.query(query, (err, results) => {
       if (err) {
           console.error('Database error:', err);
-          return res.status(500).json({ error: 'Failed to fetch inventory data.' });
+          return res.status(500).json({ error: 'Failed to fetch erp_inventory data.' });
       }
       res.json(results);
   });
 });
 
 app.post('/api/low-stock', (req, res) => {
-  const query = 'SELECT product_name, quantity FROM inventory WHERE quantity <= 10';
+  const query = 'SELECT product_name, quantity FROM erp_inventory WHERE quantity <= 10';
   
   dbCon.query(query, (error, results) => {
       if (error) {
@@ -474,7 +474,7 @@ app.get('/api/sales-summary', (req, res) => {
           SUM(amount) AS totalRevenue,
           COUNT(order_id) AS totalOrders,
           AVG(amount) AS averageOrderValue
-      FROM financial_records
+      FROM erp_financial_records
       WHERE status = 'Completed'
   `;
 
@@ -499,7 +499,7 @@ app.get('/api/weekly-sales', (req, res) => {
           day,
           SUM(total_value_get) AS total_sales
       FROM
-          statistics
+          erp_statistics
       WHERE
           timestamp >= CURDATE() - INTERVAL 7 DAY
       GROUP BY

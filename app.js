@@ -109,7 +109,7 @@ app.get("/submit", function (req, resp) {
   );
 });
 
-app.get("/geterp_inventory", (req, resp) => {
+app.get("/getinventory", (req, resp) => {
   dbCon.query("SELECT * FROM erp_inventory", (err, results) => {
     if (err) {
       resp.status(500).send("Error fetching erp_inventory data");
@@ -119,17 +119,17 @@ app.get("/geterp_inventory", (req, resp) => {
   });
 });
 
-app.post('/updateerp_inventory', (req, res) => {
+app.post('/updateinventory', (req, res) => {
   const { itemId, quantity } = req.body;
 
-  // SQL query to update the erp_inventory
+  // SQL query to update the inventory
   const query = "UPDATE erp_inventory SET quantity = ? WHERE id = ?";
   dbCon.query(query, [quantity, itemId], (err, result) => {
     if (err) {
-      console.error("Error updating erp_inventory:", err);
+      console.error("Error updating inventory:", err);
       return res.status(500).send("Internal Server Error");
     }
-    res.send("erp_inventory updated successfully");
+    res.send("inventory updated successfully");
   });
 });
 
@@ -435,7 +435,7 @@ app.get('/getRevenueData', (req, res) => {
   });
 });
 
-app.get('/geterp_inventoryStatus', (req, res) => {
+app.get('/getinventoryStatus', (req, res) => {
   const query = `
       SELECT 
           product_name AS category, 
@@ -451,7 +451,7 @@ app.get('/geterp_inventoryStatus', (req, res) => {
   dbCon.query(query, (err, results) => {
       if (err) {
           console.error('Database error:', err);
-          return res.status(500).json({ error: 'Failed to fetch erp_inventory data.' });
+          return res.status(500).json({ error: 'Failed to fetch inventory data.' });
       }
       res.json(results);
   });

@@ -49,7 +49,7 @@ dbCon.connect(function (err) {
 
 //==================Log In================
 app.get("/chk-login-submit", function (req, resp) {
-  dbCon.query("select * from erp_erp_register where username=? && password=? ", [req.query.kuchemail, req.query.kuchpwd], function (err, resultJSONTable) {
+  dbCon.query("select * from erp_register where username=? && password=? ", [req.query.kuchemail, req.query.kuchpwd], function (err, resultJSONTable) {
     if (err == null) {
       if (resultJSONTable.length > 0) {
         if (resultJSONTable[0].status == 1 || resultJSONTable[0].status == 2) {
@@ -73,7 +73,7 @@ app.get("/submit", function (req, resp) {
 
   // Query to check if the product with the same name and cost price exists
   dbCon.query(
-    "SELECT * FROM erp_erp_inventory WHERE product_name = ? AND cp = ?",
+    "SELECT * FROM erp_inventory WHERE product_name = ? AND cp = ?",
     [productName, costPrice],
     function (err, result) {
       if (err) {
@@ -81,7 +81,7 @@ app.get("/submit", function (req, resp) {
       } else if (result.length > 0) {
         // Product with the same name and cost price exists, update the quantity
         dbCon.query(
-          "UPDATE erp_erp_inventory SET quantity = quantity + ? WHERE product_name = ? AND cp = ?",
+          "UPDATE erp_inventory SET quantity = quantity + ? WHERE product_name = ? AND cp = ?",
           [orderQuantity, productName, costPrice],
           function (updateErr) {
             if (updateErr) {
@@ -94,7 +94,7 @@ app.get("/submit", function (req, resp) {
       } else {
         // Product does not exist, insert a new record
         dbCon.query(
-          "INSERT INTO erp_erp_inventory(product_name, quantity, cp, sp) VALUES(?,?,?,?)",
+          "INSERT INTO erp_inventory(product_name, quantity, cp, sp) VALUES(?,?,?,?)",
           [productName, orderQuantity, costPrice, sellingPrice],
           function (insertErr) {
             if (insertErr) {
@@ -110,7 +110,7 @@ app.get("/submit", function (req, resp) {
 });
 
 app.get("/geterp_inventory", (req, resp) => {
-  dbCon.query("SELECT * FROM erp_erp_inventory", (err, results) => {
+  dbCon.query("SELECT * FROM erp_inventory", (err, results) => {
     if (err) {
       resp.status(500).send("Error fetching erp_inventory data");
     } else {
@@ -123,7 +123,7 @@ app.post('/updateerp_inventory', (req, res) => {
   const { itemId, quantity } = req.body;
 
   // SQL query to update the erp_inventory
-  const query = "UPDATE erp_erp_inventory SET quantity = ? WHERE id = ?";
+  const query = "UPDATE erp_inventory SET quantity = ? WHERE id = ?";
   dbCon.query(query, [quantity, itemId], (err, result) => {
     if (err) {
       console.error("Error updating erp_inventory:", err);
@@ -136,7 +136,7 @@ app.post('/updateerp_inventory', (req, res) => {
 app.post('/saveerp_statistics', (req, res) => {
   const { totalItemsSold, totalValueGet } = req.body;
 
-  const query = "INSERT INTO erp_erp_statistics (total_items_sold, total_value_get, timestamp) VALUES (?, ?, NOW())";
+  const query = "INSERT INTO erp_statistics (total_items_sold, total_value_get, timestamp) VALUES (?, ?, NOW())";
   dbCon.query(query, [totalItemsSold, totalValueGet], (err, result) => {
     if (err) {
       console.error('Error saving erp_statistics:', err);

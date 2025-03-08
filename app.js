@@ -133,7 +133,7 @@ app.post('/updateinventory', (req, res) => {
   });
 });
 
-app.post('/saveerp_statistics', (req, res) => {
+app.post('/savestatistics', (req, res) => {
   const { totalItemsSold, totalValueGet } = req.body;
 
   const query = "INSERT INTO erp_statistics (total_items_sold, total_value_get, timestamp) VALUES (?, ?, NOW())";
@@ -146,7 +146,7 @@ app.post('/saveerp_statistics', (req, res) => {
   });
 });
 
-app.get('/api/erp_statistics', (req, res) => {
+app.get('/api/statistics', (req, res) => {
   const query = `
     SELECT day, SUM(total_value_get) AS total_revenue 
     FROM erp_statistics 

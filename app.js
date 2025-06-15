@@ -1,520 +1,727 @@
-var express = require("express");
-var mysql = require("mysql2");
-const multer = require("multer");
-var fileuploader = require("express-fileupload");
-var app = express();
-// const nodemailer = require("nodemailer");
-app.get("/", function (req, resp) {
-  resp.sendFile(process.cwd() + "/public/index.html");
-});
-app.use(express.static("public"));
-app.use(express.urlencoded({ extended: true }));
-app.use(fileuploader());
+const express = require("express");
+const mysql = require("mysql2/promise");
+const fileUpload = require("express-fileupload");
+const helmet = require("helmet");
+const compression = require("compression");
+require('dotenv').config();
 
-app.listen(2005, function () {
-  console.log("Server Started");
-});
+const app = express();
 
-// const nodemailer = require("nodemailer");
-const fileUpload = require('express-fileupload');
-app.use(fileUpload({
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+// Security and performance middleware (no rate limiting)
+app.use(helmet({
+  contentSecurityPolicy: false,
 }));
-app.get("/", function (req, resp) {
-  resp.sendFile(process.cwd() + "/public/index.html");
-});
-app.use(express.static("public"));
-app.use(fileuploader());
-app.use(express.json());
-app.use(fileUpload());
+app.use(compression());
 
-app.use(express.urlencoded(true));
-//==========DataBase
-var dbConfig = {
-   host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    port: 3306,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    dateStrings: true
+// Standard middleware
+app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(fileUpload({
+  limits: { 
+    fileSize: 50 * 1024 * 1024, // 50MB
+    files: 5
+  },
+  abortOnLimit: true,
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
+
+// DATABASE CONNECTION POOL
+const dbConfig = {
+  host: process.env.DB_HOST || "127.0.0.1",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "cgg@65830",
+  database: process.env.DB_NAME || "erp",
+  dateStrings: true,
+  connectionLimit: 20,
+  acquireTimeout: 60000,
+  timeout: 60000,
+  reconnect: true,
+  idleTimeout: 300000,
+  maxLifetime: 3600000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  multipleStatements: false
+};
+
+const dbPool = mysql.createPool(dbConfig);
+
+async function testConnection() {
+  try {
+    const connection = await dbPool.getConnection();
+    console.log(`✅ Database connected successfully`);
+    await connection.execute('SELECT 1');
+    connection.release();
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    process.exit(1);
+  }
 }
 
-var dbCon = mysql.createConnection(dbConfig);
-dbCon.connect(function (err) {
-  if (err == null)
-    console.log("Connected Successfully");
-  else
-    resp.send(err);
-})
-
-//==================Log In================
-app.get("/chk-login-submit", function (req, resp) {
-  dbCon.query("select * from erp_register where username=? && password=? ", [req.query.kuchemail, req.query.kuchpwd], function (err, resultJSONTable) {
-    if (err == null) {
-      if (resultJSONTable.length > 0) {
-        if (resultJSONTable[0].status == 1 || resultJSONTable[0].status == 2) {
-          // Send the status in the response body, not as an HTTP status code
-          resp.status(200).send(resultJSONTable[0].status.toString());
-        } else {
-          resp.status(403).send("USER BLOCKED");
-        }
-      } else {
-        resp.status(401).send("INVALID EMAIL OR PASSWORD");
-      }
+// Helper function for safe database queries
+async function safeQuery(query, params = []) {
+  let connection;
+  try {
+    connection = await dbPool.getConnection();
+    
+    if (params.length === 0) {
+      const [results] = await connection.query(query);
+      return results;
     } else {
-      // Respond with a 500 status code for server errors
-      resp.status(500).send("Server Error");
+      const [results] = await connection.query(query, params);
+      return results;
     }
-  });
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
+// Helper function for transactions
+async function safeTransaction(callback) {
+  const connection = await dbPool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const result = await callback(connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+// Async wrapper for route handlers
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
+
+// ROUTES
+app.get("/", (req, res) => {
+  res.sendFile(process.cwd() + "/public/index.html");
 });
 
-app.get("/submit", function (req, resp) {
+// Login endpoint
+app.get("/chk-login-submit", asyncHandler(async (req, res) => {
+  const { kuchemail, kuchpwd } = req.query;
+  
+  if (!kuchemail || !kuchpwd) {
+    return res.status(400).json({ error: "Email and password are required" });
+  }
+
+  try {
+    const results = await safeQuery(
+      "SELECT * FROM erp.register WHERE username=? AND password=?", 
+      [kuchemail, kuchpwd]
+    );
+    
+    if (results.length > 0) {
+      if (results[0].status == 1 || results[0].status == 2) {
+        res.status(200).send(results[0].status.toString());
+      } else {
+        res.status(403).send("USER BLOCKED");
+      }
+    } else {
+      res.status(401).send("INVALID EMAIL OR PASSWORD");
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).send("Server Error");
+  }
+}));
+
+// Inventory submission
+app.get("/submit", asyncHandler(async (req, res) => {
   const { productName, orderQuantity, costPrice, sellingPrice } = req.query;
 
-  // Query to check if the product with the same name and cost price exists
-  dbCon.query(
-    "SELECT * FROM erp_inventory WHERE product_name = ? AND cp = ?",
-    [productName, costPrice],
-    function (err, result) {
-      if (err) {
-        resp.send(err); // Send error response
-      } else if (result.length > 0) {
-        // Product with the same name and cost price exists, update the quantity
-        dbCon.query(
-          "UPDATE erp_inventory SET quantity = quantity + ? WHERE product_name = ? AND cp = ?",
-          [orderQuantity, productName, costPrice],
-          function (updateErr) {
-            if (updateErr) {
-              resp.send(updateErr);
-            } else {
-              resp.send("Quantity updated successfully");
-            }
-          }
+  if (!productName || !orderQuantity || !costPrice || !sellingPrice) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  const quantity = parseInt(orderQuantity);
+  const cp = parseFloat(costPrice);
+  const sp = parseFloat(sellingPrice);
+
+  if (isNaN(quantity) || isNaN(cp) || isNaN(sp) || quantity <= 0) {
+    return res.status(400).json({ error: "Invalid input values" });
+  }
+
+  try {
+    const result = await safeTransaction(async (connection) => {
+      const [existingProduct] = await connection.query(
+        "SELECT * FROM erp.inventory WHERE product_name = ? AND cp = ? FOR UPDATE",
+        [productName, cp]
+      );
+
+      if (existingProduct.length > 0) {
+        await connection.query(
+          "UPDATE erp.inventory SET quantity = quantity + ? WHERE product_name = ? AND cp = ?",
+          [quantity, productName, cp]
         );
+        return "Quantity updated successfully";
       } else {
-        // Product does not exist, insert a new record
-        dbCon.query(
-          "INSERT INTO erp_inventory(product_name, quantity, cp, sp) VALUES(?,?,?,?)",
-          [productName, orderQuantity, costPrice, sellingPrice],
-          function (insertErr) {
-            if (insertErr) {
-              resp.send(insertErr);
-            } else {
-              resp.send("Record saved successfully");
-            }
-          }
+        await connection.query(
+          "INSERT INTO erp.inventory(product_name, quantity, cp, sp) VALUES(?,?,?,?)",
+          [productName, quantity, cp, sp]
         );
+        return "Record saved successfully";
       }
-    }
-  );
-});
+    });
 
-app.get("/getinventory", (req, resp) => {
-  dbCon.query("SELECT * FROM erp_inventory", (err, results) => {
-    if (err) {
-      resp.status(500).send("Error fetching erp_inventory data");
-    } else {
-      resp.json(results);
-    }
-  });
-});
+    res.json({ message: result, success: true });
+  } catch (error) {
+    console.error('Inventory submission error:', error);
+    res.status(500).json({ error: "Server Error" });
+  }
+}));
 
-app.post('/updateinventory', (req, res) => {
+// Get inventory
+app.get("/getInventory", asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery("SELECT * FROM erp.inventory");
+    res.json(results);
+  } catch (error) {
+    console.error('Get inventory error:', error);
+    res.status(500).json({ error: "Error fetching inventory data" });
+  }
+}));
+
+// Update inventory
+app.post('/updateInventory', asyncHandler(async (req, res) => {
   const { itemId, quantity } = req.body;
 
-  // SQL query to update the inventory
-  const query = "UPDATE erp_inventory SET quantity = ? WHERE id = ?";
-  dbCon.query(query, [quantity, itemId], (err, result) => {
-    if (err) {
-      console.error("Error updating inventory:", err);
-      return res.status(500).send("Internal Server Error");
-    }
-    res.send("inventory updated successfully");
-  });
-});
+  if (!itemId || quantity === undefined) {
+    return res.status(400).json({ error: "Item ID and quantity are required" });
+  }
 
-app.post('/savestatistics', (req, res) => {
+  const qty = parseInt(quantity);
+  if (isNaN(qty) || qty < 0) {
+    return res.status(400).json({ error: "Quantity must be a non-negative number" });
+  }
+
+  try {
+    const result = await safeQuery(
+      "UPDATE erp.inventory SET quantity = ? WHERE id = ?", 
+      [qty, parseInt(itemId)]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+    
+    res.json({ message: "Inventory updated successfully", success: true });
+  } catch (error) {
+    console.error('Update inventory error:', error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}));
+
+// Save statistics
+app.post('/saveStatistics', asyncHandler(async (req, res) => {
   const { totalItemsSold, totalValueGet } = req.body;
 
-  const query = "INSERT INTO erp_statistics (total_items_sold, total_value_get, timestamp) VALUES (?, ?, NOW())";
-  dbCon.query(query, [totalItemsSold, totalValueGet], (err, result) => {
-    if (err) {
-      console.error('Error saving erp_statistics:', err);
-      return res.status(500).json({ message: 'Failed to save erp_statistics' });
-    }
-    res.status(200).json({ message: 'erp_statistics saved successfully' });
-  });
-});
+  if (!totalItemsSold || !totalValueGet) {
+    return res.status(400).json({ message: 'Total items sold and total value are required' });
+  }
 
-app.get('/api/statistics', (req, res) => {
-  const query = `
-    SELECT day, SUM(total_value_get) AS total_revenue 
-    FROM erp_statistics 
-    GROUP BY day 
-    ORDER BY FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
-  `;
-  dbCon.query(query, (err, results) => {
-    if (err) {
-      console.error('Error fetching data:', err.message);
-      return res.status(500).send('Database query failed');
-    }
-    res.json(results);
-  });
-});
-
-
-// Add a financial record
-app.post('/api/financial-records', (req, res) => {
-  const { customer_id, amount, status, bills } = req.body;
-  const query = 'INSERT INTO erp_financial_records (customer, amount, status, bills,timestamp) VALUES (?, ?, ?, ?,NOW())';
-  dbCon.query(query, [customer_id, amount, status, bills || null], (err, results) => {
-    if (err) {
-      res.status(500).json({ error: 'Failed to add record' });
-      return;
-    }
-    res.status(201).json({ message: 'Record added successfully', recordId: results.insertId });
-  });
-});
-
-app.get("/get-angular-all-records", function (req, resp) {
-  //fixed                               //same seq. as in table
-  dbCon.query("SELECT * FROM erp_financial_records ;", function (err, resultTableJSON) {
-    if (err == null)
-      resp.send(resultTableJSON);
-    else
-      resp.send(err);
-  })
-})
-
-app.get('/api/orders', async (req, res) => {
   try {
-    // Ensure you await the query result to get data
-    const [orders] = await dbCon.promise().query('SELECT * FROM erp_financial_records ORDER BY timestamp DESC LIMIT 5');
-    res.json(orders);
+    await safeQuery(
+      "INSERT INTO erp.statistics (total_items_sold, total_value_get, timestamp) VALUES (?, ?, NOW())", 
+      [parseInt(totalItemsSold), parseFloat(totalValueGet)]
+    );
+    res.status(200).json({ message: 'Statistics saved successfully' });
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    console.error('Save statistics error:', error);
+    res.status(500).json({ message: 'Failed to save statistics' });
+  }
+}));
+
+// Get statistics
+app.get('/api/statistics', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery(`
+      SELECT day, SUM(total_value_get) AS total_revenue 
+      FROM statistics 
+      GROUP BY day 
+      ORDER BY FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Get statistics error:', error);
+    res.status(500).send('Database query failed');
+  }
+}));
+
+// Add financial record
+app.post('/api/financial-records', asyncHandler(async (req, res) => {
+  const { customer_id, amount, status, bills } = req.body;
+  
+  if (!customer_id || !amount || !status) {
+    return res.status(400).json({ error: 'Customer ID, amount, and status are required' });
+  }
+
+  try {
+    const result = await safeQuery(
+      'INSERT INTO financial_records (customer, amount, status, bills, timestamp) VALUES (?, ?, ?, ?, NOW())', 
+      [customer_id, parseFloat(amount), status, bills || null]
+    );
+    res.status(201).json({ message: 'Record added successfully', recordId: result.insertId });
+  } catch (error) {
+    console.error('Add financial record error:', error);
+    res.status(500).json({ error: 'Failed to add record' });
+  }
+}));
+
+// Get all financial records
+app.get("/get-angular-all-records", asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery("SELECT * FROM financial_records");
+    res.json(results);
+  } catch (error) {
+    console.error('Get financial records error:', error);
+    res.status(500).send("Server Error");
+  }
+}));
+
+// Get recent orders
+app.get('/api/orders', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery('SELECT * FROM financial_records ORDER BY timestamp DESC LIMIT 5');
+    res.json(results);
+  } catch (error) {
+    console.error('Get orders error:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
-});
+}));
 
-app.get("/add-employee", function (req, resp) {
+// Add employee
+app.get("/add-employee", asyncHandler(async (req, res) => {
   const { workerName, workerId, workerUsername, workerPassword } = req.query;
 
   if (!workerName || !workerId || !workerUsername || !workerPassword) {
-    return resp.status(400).send("Missing required fields");
+    return res.status(400).send("Missing required fields");
   }
 
-  const query = "INSERT INTO erp_register (id, name, username, password, status) VALUES (?, ?, ?, ?, 2)";
-  dbCon.query(query, [workerId, workerName, workerUsername, workerPassword], function (err, result) {
-    if (err) {
-      console.error("Database error:", err);
-      return resp.status(500).send("Failed to add worker");
+  try {
+    const existing = await safeQuery(
+      "SELECT * FROM register WHERE id = ? OR username = ?", 
+      [workerId, workerUsername]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(409).send("Worker ID or username already exists");
     }
-    resp.status(200).send("Worker added successfully");
-  });
-});
+    
+    await safeQuery(
+      "INSERT INTO register (id, name, username, password, status) VALUES (?, ?, ?, ?, 2)", 
+      [workerId, workerName, workerUsername, workerPassword]
+    );
+    res.status(200).send("Worker added successfully");
+  } catch (error) {
+    console.error('Add employee error:', error);
+    res.status(500).send("Failed to add worker");
+  }
+}));
 
-app.get('/get-angular-employee-records', (req, res) => {
-  const sql = "SELECT * FROM erp_register where status!=1";
-  dbCon.query(sql, (err, results) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send("Error fetching records");
+// Get employee records
+app.get('/get-angular-employee-records', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery("SELECT * FROM register WHERE status != 1");
+    res.json(results);
+  } catch (error) {
+    console.error('Get employee records error:', error);
+    res.status(500).send("Error fetching records");
+  }
+}));
+
+// Delete employee
+app.get("/do-angular-delete", asyncHandler(async (req, res) => {
+  const id = req.query.idkuch;
+  
+  if (!id) {
+    return res.status(400).send("ID is required");
+  }
+
+  try {
+    const result = await safeQuery("DELETE FROM register WHERE id = ?", [id]);
+    
+    if (result.affectedRows === 1) {
+      res.send("Account Removed Successfully!");
     } else {
-      res.json(results);
+      res.status(404).send("Invalid ID");
     }
-  });
-});
+  } catch (error) {
+    console.error('Delete employee error:', error);
+    res.status(500).send("Server Error");
+  }
+}));
 
+// Block employee
+app.get("/do-angular-block", asyncHandler(async (req, res) => {
+  const id = req.query.idkuch;
+  
+  if (!id) {
+    return res.status(400).send("ID is required");
+  }
 
-app.get("/do-angular-delete", function (req, resp) {
-  //saving data in table
-  var id = req.query.idkuch;
-
-
-  //fixed                             //same seq. as in table
-  dbCon.query("delete from erp_register where id=?", [id], function (err, result) {
-    if (err == null) {
-      if (result.affectedRows == 1)
-        resp.send("Account Removed Successfully!");
-      else
-        resp.send("Inavlid id");
-    }
-    else
-      resp.send(err);
-  })
-})
-///=================
-app.get("/do-angular-block", function (req, resp) {
-  var id = req.query.idkuch;
-
-
-  dbCon.query("update  erp_register set status=0 where id=? ", [id], function (err, result) {
-    if (err == null) {
-      if (result.affectedRows == 1) {
-        resp.send("Updated Successfully..")
-      }
-      else {
-        resp.send("No such account exists");
-      }
-    }
-    else {
-      resp.send(err);
-    }
-  })
-
-})
-
-//===================
-app.get("/do-angular-resume", function (req, resp) {
-  var id = req.query.idkuch;
-
-
-  dbCon.query("update  erp_register set status=2 where id=? ", [id], function (err, result) {
-    if (err == null) {
-      if (result.affectedRows == 1) {
-        resp.send("Updated Successfully..")
-      }
-      else {
-        resp.send("No such account exists");
-      }
-    }
-    else {
-      resp.send(err);
-    }
-  })
-
-})
-
-app.get('/api/workers', (req, res) => {
-  const query = 'SELECT * FROM erp_register WHERE status = 2';
-  dbCon.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send('Error fetching workers');
+  try {
+    const result = await safeQuery("UPDATE register SET status = 0 WHERE id = ?", [id]);
+    
+    if (result.affectedRows === 1) {
+      res.send("Updated Successfully");
     } else {
-      res.json(results);
+      res.status(404).send("No such account exists");
     }
-  });
-});
+  } catch (error) {
+    console.error('Block employee error:', error);
+    res.status(500).send("Server Error");
+  }
+}));
 
-app.post('/api/worker-info', (req, res) => {
+// Resume employee
+app.get("/do-angular-resume", asyncHandler(async (req, res) => {
+  const id = req.query.idkuch;
+  
+  if (!id) {
+    return res.status(400).send("ID is required");
+  }
+
+  try {
+    const result = await safeQuery("UPDATE register SET status = 2 WHERE id = ?", [id]);
+    
+    if (result.affectedRows === 1) {
+      res.send("Updated Successfully");
+    } else {
+      res.status(404).send("No such account exists");
+    }
+  } catch (error) {
+    console.error('Resume employee error:', error);
+    res.status(500).send("Server Error");
+  }
+}));
+
+// Get workers
+app.get('/api/workers', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery('SELECT * FROM register WHERE status = 2');
+    res.json(results);
+  } catch (error) {
+    console.error('Get workers error:', error);
+    res.status(500).send('Error fetching workers');
+  }
+}));
+
+// Get worker info
+app.post('/api/worker-info', asyncHandler(async (req, res) => {
   const { username } = req.body;
+  
+  if (!username) {
+    return res.status(400).json({ error: 'Username is required' });
+  }
 
-  dbCon.query('SELECT * FROM erp_register WHERE username = ?', [username], (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to fetch worker info' });
-    }
+  try {
+    const results = await safeQuery('SELECT * FROM register WHERE username = ?', [username]);
 
-    if (result.length > 0) {
-      res.json({ worker: result[0] });
+    if (results.length > 0) {
+      res.json({ worker: results[0] });
     } else {
       res.status(404).json({ error: 'Worker not found' });
     }
-  });
-});
+  } catch (error) {
+    console.error('Get worker info error:', error);
+    res.status(500).json({ error: 'Failed to fetch worker info' });
+  }
+}));
 
-// Endpoint to save a new message
-app.post('/api/save-message', (req, res) => {
-  const { chat, name } = req.body;  // Get message and worker name from the request body
-  const timestamp = new Date();  // Get the current timestamp
-  const status = 2;  // Assuming status 0 means message sent by worker
+// Save message (worker)
+app.post('/api/save-message', asyncHandler(async (req, res) => {
+  const { chat, name } = req.body;
+  
+  if (!chat || !name) {
+    return res.status(400).json({ message: 'Chat message and name are required' });
+  }
 
-  // Insert the message into the database
-  const query = 'INSERT INTO erp_communication (chat, status, name, timestamp) VALUES (?, ?, ?, ?)';
-  dbCon.execute(query, [chat, status, name, timestamp], (err, results) => {
-    if (err) {
-      console.error('Error saving message:', err);
-      return res.status(500).json({ message: 'Error saving message' });
-    }
-    res.status(200).json({ message: 'Message saved successfully', results });
-  });
-});
+  try {
+    const result = await safeQuery(
+      'INSERT INTO communication (chat, status, name, timestamp) VALUES (?, ?, ?, ?)', 
+      [chat, 2, name, new Date()]
+    );
+    res.status(200).json({ message: 'Message saved successfully', id: result.insertId });
+  } catch (error) {
+    console.error('Save message error:', error);
+    res.status(500).json({ message: 'Error saving message' });
+  }
+}));
 
-app.post('/sendMessage', (req, res) => {
-  const { chat, name } = req.body; // Get chat message and name from request body
-  const status = 1; // Assuming 1 is the status for sent messages
-  const timestamp = new Date(); // Get current timestamp
+// Send message (admin)
+app.post('/sendMessage', asyncHandler(async (req, res) => {
+  const { chat, name } = req.body;
+  
+  if (!chat || !name) {
+    return res.status(400).json({ message: 'Chat message and name are required' });
+  }
 
-  const query = 'INSERT INTO erp_communication (chat, status, name, timestamp) VALUES (?, ?, ?, ?)';
-  dbCon.execute(query, [chat, status, name, timestamp], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: 'Error saving message' });
-    }
+  try {
+    await safeQuery(
+      'INSERT INTO communication (chat, status, name, timestamp) VALUES (?, ?, ?, ?)', 
+      [chat, 1, name, new Date()]
+    );
     res.status(200).json({ message: 'Message sent successfully' });
-  });
-});
+  } catch (error) {
+    console.error('Send message error:', error);
+    res.status(500).json({ message: 'Error saving message' });
+  }
+}));
 
-app.post('/api/fetch-messages', (req, res) => {
-  const workerName = req.body.workerName; // Assuming worker name is sent in the request body
+// Fetch messages
+app.post('/api/fetch-messages', asyncHandler(async (req, res) => {
+  const { workerName } = req.body;
+  
+  if (!workerName) {
+    return res.status(400).json({ error: 'Worker name is required' });
+  }
 
-  const query = 'SELECT * FROM erp_communication WHERE name = ? ORDER BY timestamp ASC';
-  dbCon.query(query, [workerName], (error, results) => {
-    if (error) {
-      return res.status(500).json({ error: 'Error fetching messages' });
-    }
+  try {
+    const results = await safeQuery(
+      'SELECT * FROM communication WHERE name = ? ORDER BY timestamp ASC', 
+      [workerName]
+    );
     res.json({ messages: results });
-  });
-});
+  } catch (error) {
+    console.error('Fetch messages error:', error);
+    res.status(500).json({ error: 'Error fetching messages' });
+  }
+}));
 
+// Fetch messages (alternative endpoint)
+app.get('/fetchMessages', asyncHandler(async (req, res) => {
+  const { workerName } = req.query;
+  
+  if (!workerName) {
+    return res.status(400).send("Worker name is required");
+  }
 
-// Assuming you have MySQL connection setup and Express.js server
-app.get('/fetchMessages', (req, res) => {
-  const workerName = req.query.workerName; // workerName is passed from the frontend
-
-  const query = `SELECT * FROM erp_communication WHERE name = ? ORDER BY timestamp ASC`;
-
-  dbCon.query(query, [workerName], (err, results) => {
-    if (err) {
-      console.error("Error fetching messages: ", err);
-      res.status(500).send("Internal Server Error");
-      return;
-    }
-    res.json(results); // Send the messages as a JSON response
-  });
-});
-
-app.get('/getTotalRevenue', (req, res) => {
-  const query = 'SELECT SUM(amount) AS total_revenue, COUNT(order_id) AS total_orders FROM erp_financial_records'; // Modify this query based on your actual table structure
-
-  dbCon.query(query, (err, results) => {
-    if (err) {
-      return res.status(500).send('Database query failed');
-    }
-
-    const totalRevenue = results[0].total_revenue || 0;
-    const totalOrders = results[0].total_orders || 0;
-
-    // Sending both totalRevenue and totalOrders
-    res.json({ totalRevenue, totalOrders });
-  });
-});
-
-app.get('/getTotalQuantity', (req, res) => {
-  const query = 'SELECT SUM(quantity) AS total_quantity FROM erp_inventory'; // Modify this query based on your actual table structure
-
-  dbCon.query(query, (err, results) => {
-    if (err) {
-      return res.status(500).send('Database query failed');
-    }
-
-    const totalquantity = results[0].total_quantity || 0;
-
-    res.json({ totalquantity });
-  });
-});
-
-app.get('/getTotalEmployee', (req, res) => {
-  const query = 'SELECT COUNT(id) AS total_employee FROM erp_register where status=2'; // Modify this query based on your actual table structure
-
-  dbCon.query(query, (err, results) => {
-    if (err) {
-      return res.status(500).send('Database query failed');
-    }
-
-    const totalemployee = results[0].total_employee || 0;
-
-    res.json({ totalemployee });
-  });
-});
-
-app.get('/getRevenueData', (req, res) => {
-  const query = `
-      SELECT DAYNAME(timestamp) AS day, SUM(total_value_get) AS total_revenue
-      FROM erp_statistics
-      GROUP BY DAYNAME(timestamp)
-      ORDER BY DAYNAME(timestamp);`;
-
-  dbCon.query(query, (err, results) => {
-    if (err) {
-      console.error('Error fetching data:', err);
-      return res.status(500).send('Database error');
-    }
+  try {
+    const results = await safeQuery(
+      'SELECT * FROM communication WHERE name = ? ORDER BY timestamp ASC', 
+      [workerName]
+    );
     res.json(results);
-  });
-});
+  } catch (error) {
+    console.error('Fetch messages error:', error);
+    res.status(500).send("Internal Server Error");
+  }
+}));
 
-app.get('/getinventoryStatus', (req, res) => {
-  const query = `
+// Get total revenue and orders
+app.get('/getTotalRevenue', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery(
+      'SELECT SUM(amount) AS total_revenue, COUNT(order_id) AS total_orders FROM financial_records'
+    );
+
+    const data = {
+      totalRevenue: results[0].total_revenue || 0,
+      totalOrders: results[0].total_orders || 0
+    };
+
+    res.json(data);
+  } catch (error) {
+    console.error('Get total revenue error:', error);
+    res.status(500).send('Database query failed');
+  }
+}));
+
+// Get total inventory quantity
+app.get('/getTotalQuantity', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery('SELECT SUM(quantity) AS total_quantity FROM inventory');
+    const totalquantity = results[0].total_quantity || 0;
+    res.json({ totalquantity });
+  } catch (error) {
+    console.error('Get total quantity error:', error);
+    res.status(500).send('Database query failed');
+  }
+}));
+
+// Get total employees
+app.get('/getTotalEmployee', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery('SELECT COUNT(id) AS total_employee FROM register WHERE status = 2');
+    const totalemployee = results[0].total_employee || 0;
+    res.json({ totalemployee });
+  } catch (error) {
+    console.error('Get total employee error:', error);
+    res.status(500).send('Database query failed');
+  }
+}));
+
+// Get revenue data by day
+app.get('/getRevenueData', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery(`
+      SELECT DAYNAME(timestamp) AS day, SUM(total_value_get) AS total_revenue
+      FROM statistics
+      GROUP BY DAYNAME(timestamp)
+      ORDER BY DAYNAME(timestamp)
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Get revenue data error:', error);
+    res.status(500).send('Database error');
+  }
+}));
+
+// Get inventory status
+app.get('/getInventoryStatus', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery(`
       SELECT 
-          product_name AS category, 
-          quantity,
-          CASE 
-              WHEN quantity = 0 THEN 'Out of Stock'
-              WHEN quantity < 10 THEN 'Low Stock'
-              ELSE 'Sufficient Stock'
-          END AS status
-      FROM erp_inventory;
-  `;
-  
-  dbCon.query(query, (err, results) => {
-      if (err) {
-          console.error('Database error:', err);
-          return res.status(500).json({ error: 'Failed to fetch inventory data.' });
-      }
-      res.json(results);
-  });
-});
+        product_name AS category, 
+        quantity,
+        CASE 
+          WHEN quantity = 0 THEN 'Out of Stock'
+          WHEN quantity < 10 THEN 'Low Stock'
+          ELSE 'Sufficient Stock'
+        END AS status
+      FROM inventory
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Get inventory status error:', error);
+    res.status(500).json({ error: 'Failed to fetch inventory data.' });
+  }
+}));
 
-app.post('/api/low-stock', (req, res) => {
-  const query = 'SELECT product_name, quantity FROM erp_inventory WHERE quantity <= 10';
-  
-  dbCon.query(query, (error, results) => {
-      if (error) {
-          return res.status(500).json({ error: 'Error fetching low stock items' });
-      }
-      res.json(results);  // Return the low stock items as JSON
-  });
-});
+// Get low stock items
+app.post('/api/low-stock', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery('SELECT product_name, quantity FROM inventory WHERE quantity <= 10');
+    res.json(results);
+  } catch (error) {
+    console.error('Get low stock error:', error);
+    res.status(500).json({ error: 'Error fetching low stock items' });
+  }
+}));
 
-app.get('/api/sales-summary', (req, res) => {
-  const query = `
+// Get sales summary
+app.get('/api/sales-summary', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery(`
       SELECT
-          SUM(amount) AS totalRevenue,
-          COUNT(order_id) AS totalOrders,
-          AVG(amount) AS averageOrderValue
-      FROM erp_financial_records
+        SUM(amount) AS totalRevenue,
+        COUNT(order_id) AS totalOrders,
+        AVG(amount) AS averageOrderValue
+      FROM financial_records
       WHERE status = 'Completed'
-  `;
+    `);
 
-  dbCon.query(query, (error, results) => {    
-      if (error) {
-          console.error('Database query failed:', error);
-          return res.status(500).json({ error: 'Database query failed' });
-      }
+    const { totalRevenue, totalOrders, averageOrderValue } = results[0];
+    res.json({
+      totalRevenue: totalRevenue || 0,
+      totalOrders: totalOrders || 0,
+      averageOrderValue: averageOrderValue || 0
+    });
+  } catch (error) {
+    console.error('Get sales summary error:', error);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+}));
 
-      const { totalRevenue, totalOrders, averageOrderValue } = results[0];
-      res.json({
-          totalRevenue: totalRevenue || 0,
-          totalOrders: totalOrders || 0,
-          averageOrderValue: averageOrderValue || 0
-      });
-  });
+// Get weekly sales
+app.get('/api/weekly-sales', asyncHandler(async (req, res) => {
+  try {
+    const results = await safeQuery(`
+      SELECT
+        day,
+        SUM(total_value_get) AS total_sales
+      FROM statistics
+      WHERE timestamp >= CURDATE() - INTERVAL 7 DAY
+      GROUP BY day
+      ORDER BY FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Get weekly sales error:', error);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+}));
+
+// Health check endpoints
+app.get('/health', asyncHandler(async (req, res) => {
+  try {
+    await safeQuery('SELECT 1');
+    res.json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'unhealthy', 
+      error: 'Database connection failed' 
+    });
+  }
+}));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File too large' });
+  }
+
+  if (err.code && err.code.includes('ER_')) {
+    return res.status(500).json({ error: 'Database error' });
+  }
+
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
-app.get('/api/weekly-sales', (req, res) => {
-  const query = `
-      SELECT
-          day,
-          SUM(total_value_get) AS total_sales
-      FROM
-          erp_statistics
-      WHERE
-          timestamp >= CURDATE() - INTERVAL 7 DAY
-      GROUP BY
-          day
-      ORDER BY
-          FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
-  `;
-  
-  dbCon.query(query, (error, results) => {
-      if (error) {
-          res.status(500).json({ error: 'Database query failed' });
-          return;
-      }
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
+});
 
-      // Send the results to the frontend
-      res.json(results);
+// Graceful shutdown handling
+const gracefulShutdown = () => {
+  console.log('Received shutdown signal, closing gracefully...');
+  
+  dbPool.end((err) => {
+    if (err) {
+      console.error('Error closing database pool:', err);
+    } else {
+      console.log('Database pool closed');
+    }
+    process.exit(0);
   });
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+// Start server
+const PORT = process.env.PORT || 2005;
+const server = app.listen(PORT, () => {
+  console.log(`✅ Server started on port ${PORT}`);
+  testConnection();
+});
+
+server.timeout = 30000;
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });

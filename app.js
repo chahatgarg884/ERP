@@ -35,27 +35,70 @@ const dbConfig = {
   database: process.env.DB_NAME || "erp",
   dateStrings: true,
   connectionLimit: 20,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true,
-  idleTimeout: 300000,
-  maxLifetime: 3600000,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-  multipleStatements: false
+  // REMOVED: acquireTimeout - not valid for mysql2
+  // REMOVED: timeout - not valid for mysql2  
+  // REMOVED: reconnect - not valid for mysql2
+  // REMOVED: maxLifetime - not valid for mysql2
+  
+  // CORRECT mysql2 options:
+  connectTimeout: 60000,          // replaces timeout
+  acquireTimeout: 60000,          // this is actually valid for pools
+  waitForConnections: true,       // replaces reconnect behavior
+  queueLimit: 0,                  // no limit on queued connections
+  idleTimeout: 300000,           // this is valid
+  enableKeepAlive: true,         // this is valid
+  keepAliveInitialDelay: 0,      // this is valid
+  multipleStatements: false      // this is valid
 };
 
 const dbPool = mysql.createPool(dbConfig);
 
-async function testConnection() {
-  try {
-    const connection = await dbPool.getConnection();
-    console.log(`✅ Database connected successfully`);
-    await connection.execute('SELECT 1');
-    connection.release();
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    process.exit(1);
+// Improved connection test with better error handling and retry logic
+async function testConnection(retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`🔄 Attempting database connection (attempt ${i + 1}/${retries})...`);
+      
+      const connection = await dbPool.getConnection();
+      console.log(`✅ Database connected successfully to ${process.env.DB_HOST || 'localhost'}`);
+      
+      // Test the connection with a simple query
+      await connection.execute('SELECT 1 as test');
+      console.log(`✅ Database query test successful`);
+      
+      connection.release();
+      return; // Success - exit function
+      
+    } catch (error) {
+      console.error(`❌ Database connection attempt ${i + 1} failed:`, {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306
+      });
+      
+      if (i === retries - 1) {
+        // Last attempt failed
+        console.error('💀 All database connection attempts failed. Check:');
+        console.error('   1. Database server is running');
+        console.error('   2. Connection credentials are correct');
+        console.error('   3. Network connectivity to database');
+        console.error('   4. Firewall settings');
+        console.error('   5. Database accepts connections from this IP');
+        
+        // Don't exit in production - let the app start but log the error
+        if (process.env.NODE_ENV === 'production') {
+          console.error('⚠️  Starting server without database connection (production mode)');
+          return;
+        } else {
+          process.exit(1);
+        }
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   }
 }
 

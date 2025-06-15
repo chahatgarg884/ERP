@@ -27,29 +27,43 @@ app.use(fileUpload({
   tempFileDir: '/tmp/'
 }));
 
-// DATABASE CONNECTION POOL
+// IMPROVED DATABASE CONNECTION POOL
 const dbConfig = {
   host: process.env.DB_HOST || "127.0.0.1",
-  user: process.env.DB_USER || "root",
+  port: process.env.DB_PORT || 3306,
+  user: process.env.DB_USER || "root", 
   password: process.env.DB_PASSWORD || "cgg@65830",
   database: process.env.DB_NAME || "erp",
-  dateStrings: true,
-  connectionLimit: 20,
-  // REMOVED: acquireTimeout - not valid for mysql2
-  // REMOVED: timeout - not valid for mysql2  
-  // REMOVED: reconnect - not valid for mysql2
-  // REMOVED: maxLifetime - not valid for mysql2
   
-  // CORRECT mysql2 options:
-  connectTimeout: 60000,          // replaces timeout
-  acquireTimeout: 60000,          // this is actually valid for pools
-  waitForConnections: true,       // replaces reconnect behavior
-  queueLimit: 0,                  // no limit on queued connections
-  idleTimeout: 300000,           // this is valid
-  enableKeepAlive: true,         // this is valid
-  keepAliveInitialDelay: 0,      // this is valid
-  multipleStatements: false      // this is valid
+  // Connection settings
+  connectTimeout: 30000,        // 30 seconds to establish connection
+  acquireTimeout: 30000,        // 30 seconds to get connection from pool
+  timeout: 30000,               // 30 seconds for queries
+  
+  // Pool settings
+  connectionLimit: 10,          // Reduced for stability
+  queueLimit: 0,
+  waitForConnections: true,
+  
+  // Keep-alive and reconnection
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  reconnect: true,
+  
+  // SSL settings (important for hosted databases)
+  ssl: process.env.DB_SSL === 'true' ? {
+    rejectUnauthorized: false
+  } : false,
+  
+  // Other settings
+  dateStrings: true,
+  multipleStatements: false,
+  charset: 'utf8mb4'
 };
+
+let dbPool;
+let isDbConnected = false;
+
 
 const dbPool = mysql.createPool(dbConfig);
 

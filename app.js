@@ -30,32 +30,68 @@ app.use(fileUpload({
 // DATABASE CONNECTION POOL
 const dbConfig = {
   host: process.env.DB_HOST || "127.0.0.1",
-  user: process.env.DB_USER || "root",
+  user: process.env.DB_USER || "root", 
   password: process.env.DB_PASSWORD || "cgg@65830",
   database: process.env.DB_NAME || "erp",
+  port: process.env.DB_PORT || 3306,
   dateStrings: true,
+  
+  // VALID MySQL2/promise pool options:
   connectionLimit: 20,
-  acquireTimeout: 60000,
-  timeout: 60000,
+  queueLimit: 0,
+  acquireTimeout: 60000,      // This is valid for pools
+  waitForConnections: true,
   reconnect: true,
-  idleTimeout: 300000,
-  maxLifetime: 3600000,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-  multipleStatements: false
+  
+  // Connection-level options (valid):
+  connectTimeout: 60000,      // Replaces 'timeout'
+  ssl: process.env.DB_SSL === 'true' ? {
+    rejectUnauthorized: false
+  } : false,
+  
+  // Remove these INVALID options that were causing errors:
+  // timeout: 60000,          // ❌ Invalid - use connectTimeout
+  // idleTimeout: 300000,     // ❌ Invalid - not supported
+  // maxLifetime: 3600000,    // ❌ Invalid - not supported  
+  // enableKeepAlive: true,   // ❌ Invalid - not supported
+  // keepAliveInitialDelay: 0,// ❌ Invalid - not supported
+  // multipleStatements: false // ❌ Already default
 };
-
 const dbPool = mysql.createPool(dbConfig);
 
 async function testConnection() {
+  let connection;
   try {
-    const connection = await dbPool.getConnection();
+    console.log('🔄 Testing database connection...');
+    console.log(`Connecting to: ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
+    
+    connection = await dbPool.getConnection();
     console.log(`✅ Database connected successfully`);
-    await connection.execute('SELECT 1');
+    
+    const [rows] = await connection.execute('SELECT 1 as test');
+    console.log('✅ Database query test passed');
+    
     connection.release();
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    process.exit(1);
+    console.error('❌ Database connection failed:');
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    
+    if (error.code === 'ETIMEDOUT') {
+      console.error('💡 Timeout error - check if database server is reachable');
+      console.error('💡 Verify host, port, and network connectivity');
+    } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+      console.error('💡 Access denied - check username/password');
+    } else if (error.code === 'ENOTFOUND') {
+      console.error('💡 Host not found - check database host address');
+    }
+    
+    if (connection) connection.release();
+    
+    // Don't exit in production, let the app start and retry
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
   }
 }
 

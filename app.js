@@ -39,9 +39,9 @@ const dbConfig = {
   // VALID MySQL2/promise pool options:
   connectionLimit: 20,
   queueLimit: 0,
-  acquireTimeout: 60000,      // This is valid for pools
+  acquireTimeout: 60000,      // This is valid for pools  
   waitForConnections: true,
-  reconnect: true,
+  // reconnect: true,         // ❌ Remove this - not valid for pools
   
   // Connection-level options (valid):
   connectTimeout: 60000,      // Replaces 'timeout'
@@ -59,6 +59,7 @@ const dbConfig = {
 };
 const dbPool = mysql.createPool(dbConfig);
 
+// Enhanced connection test with better error handling
 async function testConnection() {
   let connection;
   try {
